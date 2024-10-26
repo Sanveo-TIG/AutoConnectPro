@@ -476,9 +476,38 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                         }
                                         else
                                         {
-                                            System.Windows.MessageBox.Show("Conduits are in Maximum Distance or Conduits are Unaligned", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                            SelectedElements.Clear();
-                                            uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                            Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel = null;
+                                            string tabName = "Sanveo Tools";
+                                            string panelName = "Auto Updater";
+
+
+
+                                            string executableLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                                            string dllLocation = Path.Combine(executableLocation, "AutoUpdaterPro.dll");
+
+
+                                            List<Autodesk.Revit.UI.RibbonPanel> panels = uiApp.GetRibbonPanels(tabName);
+                                            Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel01 = panels.FirstOrDefault(p => p.Name == panelName);
+                                            bool ErrorOccured = false;
+                                            if (autoUpdaterPanel01 != null)
+                                            {
+                                                IList<RibbonItem> items = autoUpdaterPanel01.GetItems();
+
+                                                foreach (RibbonItem item in items)
+                                                {
+                                                    if (item is PushButton pushButton && pushButton.ItemText == "AutoUpdate ON")
+                                                    {
+                                                        ErrorOccured = true;
+                                                    }
+                                                }
+                                            }
+                                            if (!ErrorOccured)
+                                            {
+                                                System.Windows.MessageBox.Show("Conduits are in Maximum Distance or Conduits are Unaligned", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                SelectedElements.Clear();
+                                                uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                            }
+                                           
                                         }
                                     }
                                 }
