@@ -478,36 +478,51 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                         {
                                             Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel = null;
                                             string tabName = "Sanveo Tools";
-                                            string panelName = "Auto Updater";
-
-
-
+                                            string panelName = "AutoUpdate";
+                                            string panelNameAC = "Auto Connect";
                                             string executableLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                                             string dllLocation = Path.Combine(executableLocation, "AutoUpdaterPro.dll");
-
-
                                             List<Autodesk.Revit.UI.RibbonPanel> panels = uiApp.GetRibbonPanels(tabName);
                                             Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel01 = panels.FirstOrDefault(p => p.Name == panelName);
+                                            Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel02 = panels.FirstOrDefault(p => p.Name == panelNameAC);
                                             bool ErrorOccured = false;
                                             if (autoUpdaterPanel01 != null)
                                             {
                                                 IList<RibbonItem> items = autoUpdaterPanel01.GetItems();
-
                                                 foreach (RibbonItem item in items)
                                                 {
                                                     if (item is PushButton pushButton && pushButton.ItemText == "AutoUpdate ON")
                                                     {
                                                         ErrorOccured = true;
                                                     }
+                                                    else if (item.ItemText == "AutoUpdate" && !item.Enabled && autoUpdaterPanel02.GetItems().OfType<PushButton>().Any(btn => btn.ItemText == "AutoConnect ON")
+                                                        && autoUpdaterPanel01.GetItems().OfType<PushButton>().Any(btn => btn.ItemText == "AutoUpdate OFF"))
+                                                    {
+                                                        ErrorOccured = true;
+                                                        BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
+                                                        BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
+                                                        ToggleConPakToolsButton.ItemText = "AutoConnect OFF";
+                                                        ToggleConPakToolsButton.LargeImage = OffLargeImage;
+                                                        ToggleConPakToolsButton.Image = OffImage;
+                                                        ToggleConPakToolsButtonSample.Enabled = true;
+                                                    }
                                                 }
                                             }
                                             if (!ErrorOccured)
                                             {
-                                                System.Windows.MessageBox.Show("Conduits are in Maximum Distance or Conduits are Unaligned", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                                SelectedElements.Clear();
-                                                uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                if (CongridDictionary1.Count == 1)
+                                                {
+                                                    System.Windows.MessageBox.Show("Please select two equal sets of conduits", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                    SelectedElements.Clear();
+                                                    uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                }
+                                                else
+                                                {
+                                                    System.Windows.MessageBox.Show("The conduits are at maximum distance or are unaligned", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                    SelectedElements.Clear();
+                                                    uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                }
                                             }
-                                           
                                         }
                                     }
                                 }

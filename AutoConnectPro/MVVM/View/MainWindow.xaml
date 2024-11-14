@@ -120,14 +120,15 @@
        VerticalAlignment="Center">
         <materialDesign:PopupBox  PlacementMode="BottomAndAlignCentres"
                                Width="35" Name="popupBox" IsPopupOpen="{Binding IsPopupOpened, UpdateSourceTrigger=PropertyChanged,Mode=TwoWay}"
-                               Height="35" PreviewMouseLeftButtonDown="popupBox_PreviewMouseLeftButtonDown" 
-                               Style="{StaticResource MaterialDesignMultiFloatingActionAccentPopupBox}"
+                               Height="35" PreviewMouseLeftButtonDown="popupBox_PreviewMouseLeftButtonDown" MouseMove="popupBox_MouseMove" 
+                               Style="{StaticResource MaterialDesignMultiFloatingActionAccentPopupBox}" 
+                                  PreviewMouseRightButtonUp="popupBox_PreviewMouseRightButtonUp"  PreviewMouseRightButtonDown="popupBox_PreviewMouseRightButtonDown"
                                ToggleCheckedContentCommand="{Binding FloatingActionDemoCommand}"
                                ToggleCheckedContentCommandParameter="wowsers">
             <!--MouseDown="PopupBox_MouseDown"-->
             <materialDesign:PopupBox.ToggleContent>
                 <materialDesign:PackIcon Kind="Play" Name="tglePlay"
-                                      Width="24" 
+                                      Width="24"
                                       Height="24" />
             </materialDesign:PopupBox.ToggleContent>
             <materialDesign:PopupBox.ToggleCheckedContent>

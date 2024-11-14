@@ -106,7 +106,7 @@ namespace AutoConnectPro
                     }
                     else
                     {
-                        System.Windows.MessageBox.Show("Please select the same number of conduits", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        System.Windows.MessageBox.Show("Please select the same number of conduits", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
                 //}
@@ -1202,6 +1202,11 @@ namespace AutoConnectPro
                                 isoffsetwindowClose = true;
                             }
                         }
+                    }
+                    else if (CongridDictionary1.Count == 1)
+                    {
+                        isoffsetwindowClose = true;
+                        System.Windows.MessageBox.Show("Please select two equal sets of conduits", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
                 }
                 if (iswindowClose)
@@ -4897,7 +4902,7 @@ namespace AutoConnectPro
             {
                 System.Windows.MessageBox.Show("Warning. \n" + exception.Message, "Alert", MessageBoxButton.OK, MessageBoxImage.Warning);
                 successful = false;
-                 _ = Utility.UserActivityLog(System.Reflection.Assembly.GetExecutingAssembly(), uiapp, "Auto Connect", startDate, "Failed", "Vertical Offset", "Public", "Connect");
+                _ = Utility.UserActivityLog(System.Reflection.Assembly.GetExecutingAssembly(), uiapp, "Auto Connect", startDate, "Failed", "Vertical Offset", "Public", "Connect");
             }
         }
         #region funct

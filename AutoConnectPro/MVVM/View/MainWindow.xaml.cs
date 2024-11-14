@@ -96,10 +96,14 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
         public bool isDragging = false;
 
         public bool isStaticTool = false;
-       
+
         public double _left;
         public double _top;
         private bool _IsPopupOpen;
+
+        private bool isDrag = false;
+        private System.Windows.Point mouseOffset;
+        private System.Windows.Point popupInitialOffset;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -173,7 +177,7 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
         }
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if (ExternalApplication.ToggleConPakToolsButton.ItemText == "AutoConnect ON") 
+            if (ExternalApplication.ToggleConPakToolsButton.ItemText == "AutoConnect ON")
             {
                 MoveBottomRightEdgeOfWindowToMousePosition();
             }
@@ -208,10 +212,6 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
         {
             _externalEvents[0].Raise();
         }*/
-        private void popupBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _externalEvents[0].Raise();
-        }
         private void popupClose_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (isStaticTool)
@@ -225,6 +225,32 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                 ExternalApplication.Toggle();
                 _externalEvents[1].Raise();
             }
+        }
+        private void popupBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _externalEvents[0].Raise();
+        }
+        private void popupBox_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (isDrag)
+            {
+                System.Windows.Point currentMousePos = e.GetPosition(null);
+                this.Left = currentMousePos.X - mouseOffset.X + popupInitialOffset.X;
+                this.Top = currentMousePos.Y - mouseOffset.Y + popupInitialOffset.Y;
+                Mouse.UpdateCursor();
+            }
+        }
+        private void popupBox_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            isDrag = true;
+            mouseOffset = e.GetPosition(this);
+            popupInitialOffset = new System.Windows.Point(this.Left, this.Top);
+            Mouse.Capture(sender as IInputElement);
+        }
+        private void popupBox_PreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            isDrag = false;
+            Mouse.Capture(null);
         }
     }
 }
