@@ -388,82 +388,85 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                     List<Element> groupSecondarySelectedElements = new List<Element>();
                                                     groupPrimarySelectedElements = groupPrimary.Select(x => x.Value.FirstOrDefault()).ToList();
                                                     groupSecondarySelectedElements = groupSecondary.Select(x => x.Value.FirstOrDefault()).ToList();
-                                                    if (groupPrimarySelectedElements != null && groupPrimarySelectedElements.Count > 0)
+                                                    if (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count)
                                                     {
-                                                        List<Element> elementlist = new List<Element>();
-                                                        foreach (ElementId id in groupPrimarySelectedElements.Select(x => x.Id))
+                                                        if (groupPrimarySelectedElements != null && groupPrimarySelectedElements.Count > 0)
                                                         {
-                                                            Element elem = doc.GetElement(id);
-                                                            if (elem.Category != null && elem.Category.Name == "Conduits")
+                                                            List<Element> elementlist = new List<Element>();
+                                                            foreach (ElementId id in groupPrimarySelectedElements.Select(x => x.Id))
                                                             {
-                                                                elementlist.Add(elem);
-                                                            }
-                                                        }
-                                                        List<ElementId> FittingElem = new List<ElementId>();
-                                                        for (int i = 0; i < elementlist.Count; i++)
-                                                        {
-                                                            ConnectorSet connector = GetConnectorSet(elementlist[i]);
-                                                            List<ElementId> Icollect = new List<ElementId>();
-                                                            foreach (Connector connect in connector)
-                                                            {
-                                                                ConnectorSet cs1 = connect.AllRefs;
-                                                                foreach (Connector c in cs1)
+                                                                Element elem = doc.GetElement(id);
+                                                                if (elem.Category != null && elem.Category.Name == "Conduits")
                                                                 {
-                                                                    Icollect.Add(c.Owner.Id);
+                                                                    elementlist.Add(elem);
                                                                 }
-                                                                foreach (ElementId eid in Icollect)
+                                                            }
+                                                            List<ElementId> FittingElem = new List<ElementId>();
+                                                            for (int i = 0; i < elementlist.Count; i++)
+                                                            {
+                                                                ConnectorSet connector = GetConnectorSet(elementlist[i]);
+                                                                List<ElementId> Icollect = new List<ElementId>();
+                                                                foreach (Connector connect in connector)
                                                                 {
-                                                                    if (doc.GetElement(eid) != null && (doc.GetElement(eid).Category != null && doc.GetElement(eid).Category.Name == "Conduit Fittings"))
+                                                                    ConnectorSet cs1 = connect.AllRefs;
+                                                                    foreach (Connector c in cs1)
                                                                     {
-                                                                        FittingElem.Add(eid);
+                                                                        Icollect.Add(c.Owner.Id);
+                                                                    }
+                                                                    foreach (ElementId eid in Icollect)
+                                                                    {
+                                                                        if (doc.GetElement(eid) != null && (doc.GetElement(eid).Category != null && doc.GetElement(eid).Category.Name == "Conduit Fittings"))
+                                                                        {
+                                                                            FittingElem.Add(eid);
+                                                                        }
                                                                     }
                                                                 }
                                                             }
-                                                        }
-                                                        List<ElementId> FittingElements = new List<ElementId>();
-                                                        FittingElements = FittingElem.Distinct().ToList();
-                                                        if (FittingElements.Count == (2 * (elementlist.Count)))
-                                                        {
-                                                            isErrorOccuredinAutoConnect = true;
-                                                        }
-                                                    }
-                                                    if (groupSecondarySelectedElements != null && groupSecondarySelectedElements.Count > 0)
-                                                    {
-                                                        List<Element> elementlist = new List<Element>();
-                                                        foreach (ElementId id in groupSecondarySelectedElements.Select(x => x.Id))
-                                                        {
-                                                            Element elem = doc.GetElement(id);
-                                                            if (elem.Category != null && elem.Category.Name == "Conduits")
+                                                            List<ElementId> FittingElements = new List<ElementId>();
+                                                            FittingElements = FittingElem.Distinct().ToList();
+                                                            if (FittingElements.Count == (2 * (elementlist.Count)))
                                                             {
-                                                                elementlist.Add(elem);
+                                                                isErrorOccuredinAutoConnect = true;
                                                             }
                                                         }
-                                                        List<ElementId> FittingElem = new List<ElementId>();
-                                                        for (int i = 0; i < elementlist.Count; i++)
+                                                        if (groupSecondarySelectedElements != null && groupSecondarySelectedElements.Count > 0)
                                                         {
-                                                            ConnectorSet connector = GetConnectorSet(elementlist[i]);
-                                                            List<ElementId> Icollect = new List<ElementId>();
-                                                            foreach (Connector connect in connector)
+                                                            List<Element> elementlist = new List<Element>();
+                                                            foreach (ElementId id in groupSecondarySelectedElements.Select(x => x.Id))
                                                             {
-                                                                ConnectorSet cs1 = connect.AllRefs;
-                                                                foreach (Connector c in cs1)
+                                                                Element elem = doc.GetElement(id);
+                                                                if (elem.Category != null && elem.Category.Name == "Conduits")
                                                                 {
-                                                                    Icollect.Add(c.Owner.Id);
+                                                                    elementlist.Add(elem);
                                                                 }
-                                                                foreach (ElementId eid in Icollect)
+                                                            }
+                                                            List<ElementId> FittingElem = new List<ElementId>();
+                                                            for (int i = 0; i < elementlist.Count; i++)
+                                                            {
+                                                                ConnectorSet connector = GetConnectorSet(elementlist[i]);
+                                                                List<ElementId> Icollect = new List<ElementId>();
+                                                                foreach (Connector connect in connector)
                                                                 {
-                                                                    if (doc.GetElement(eid) != null && (doc.GetElement(eid).Category != null && doc.GetElement(eid).Category.Name == "Conduit Fittings"))
+                                                                    ConnectorSet cs1 = connect.AllRefs;
+                                                                    foreach (Connector c in cs1)
                                                                     {
-                                                                        FittingElem.Add(eid);
+                                                                        Icollect.Add(c.Owner.Id);
+                                                                    }
+                                                                    foreach (ElementId eid in Icollect)
+                                                                    {
+                                                                        if (doc.GetElement(eid) != null && (doc.GetElement(eid).Category != null && doc.GetElement(eid).Category.Name == "Conduit Fittings"))
+                                                                        {
+                                                                            FittingElem.Add(eid);
+                                                                        }
                                                                     }
                                                                 }
                                                             }
-                                                        }
-                                                        List<ElementId> FittingElements = new List<ElementId>();
-                                                        FittingElements = FittingElem.Distinct().ToList();
-                                                        if (FittingElements.Count == (2 * (elementlist.Count)))
-                                                        {
-                                                            isErrorOccuredinAutoConnect = true;
+                                                            List<ElementId> FittingElements = new List<ElementId>();
+                                                            FittingElements = FittingElem.Distinct().ToList();
+                                                            if (FittingElements.Count == (2 * (elementlist.Count)))
+                                                            {
+                                                                isErrorOccuredinAutoConnect = true;
+                                                            }
                                                         }
                                                     }
                                                     if (isErrorOccuredinAutoConnect)
