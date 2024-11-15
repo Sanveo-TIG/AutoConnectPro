@@ -187,37 +187,35 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
         }
         public static void Toggle()
         {
-            string s = ToggleConPakToolsButton.ItemText;
-
-
-            BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
-
-            BitmapImage OnImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-on 16x16.png"));
-
-            BitmapImage OnLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/on 32x32.png"));
-
-            BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
-
-            if (s == "AutoConnect OFF")
+            try
             {
-                ProjectParameterHandler projectParameterHandler = new ProjectParameterHandler();
-                ExternalEvent Event = ExternalEvent.Create(projectParameterHandler);
-                Event.Raise();
-                ToggleConPakToolsButton.LargeImage = OnLargeImage;
-                ToggleConPakToolsButton.Image = OnImage;
+                string s = ToggleConPakToolsButton.ItemText;
+                BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
+                BitmapImage OnImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-on 16x16.png"));
+                BitmapImage OnLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/on 32x32.png"));
+                BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
+                if (s == "AutoConnect OFF")
+                {
+                    ProjectParameterHandler projectParameterHandler = new ProjectParameterHandler();
+                    ExternalEvent Event = ExternalEvent.Create(projectParameterHandler);
+                    Event.Raise();
+                    ToggleConPakToolsButton.LargeImage = OnLargeImage;
+                    ToggleConPakToolsButton.Image = OnImage;
 
-                ToggleConPakToolsButtonSample.Enabled = false;
+                    ToggleConPakToolsButtonSample.Enabled = false;
+                }
+                else
+                {
+                    ToggleConPakToolsButton.LargeImage = OffLargeImage;
+                    ToggleConPakToolsButton.Image = OffImage;
+
+                    ToggleConPakToolsButtonSample.Enabled = true;
+                }
+                ToggleConPakToolsButton.ItemText = s.Equals("AutoConnect OFF") ? "AutoConnect ON" : "AutoConnect OFF";
             }
-            else
+            catch (Exception)
             {
-                ToggleConPakToolsButton.LargeImage = OffLargeImage;
-                ToggleConPakToolsButton.Image = OffImage;
-
-                ToggleConPakToolsButtonSample.Enabled = true;
             }
-
-            ToggleConPakToolsButton.ItemText = s.Equals("AutoConnect OFF") ? "AutoConnect ON" : "AutoConnect OFF";
-
             //METHOD 1
             /*foreach (PushButton button in ToggleConPakToolsButtonList)
             {
@@ -327,178 +325,149 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
         }
         private void OnIdling(object sender, Autodesk.Revit.UI.Events.IdlingEventArgs e)
         {
-            if (ToggleConPakToolsButton.ItemText == "AutoConnect ON")
+            try
             {
-                List<Element> selectedElements = new List<Element>();
-                UIApplication uiApp = sender as UIApplication;
-                UIDocument uiDoc = uiApp.ActiveUIDocument;
-                Document doc = uiDoc.Document;
-
-                if (doc != null && !doc.IsReadOnly)
+                if (ToggleConPakToolsButton.ItemText == "AutoConnect ON")
                 {
-                    // Get the current selection
-                    Selection selection = uiDoc.Selection;
-                    List<ElementId> selectedIds = selection.GetElementIds().ToList();
-                    List<Element> SelectedElements = new List<Element>();
-                    foreach (ElementId elementID in selectedIds)
+                    List<Element> selectedElements = new List<Element>();
+                    UIApplication uiApp = sender as UIApplication;
+                    UIDocument uiDoc = uiApp.ActiveUIDocument;
+                    Document doc = uiDoc.Document;
+
+                    if (doc != null && !doc.IsReadOnly)
                     {
-                        if (doc.GetElement(elementID).Category != null)
+                        // Get the current selection
+                        Selection selection = uiDoc.Selection;
+                        List<ElementId> selectedIds = selection.GetElementIds().ToList();
+                        List<Element> SelectedElements = new List<Element>();
+                        foreach (ElementId elementID in selectedIds)
                         {
-                            if (doc.GetElement(elementID).Category.Name == "Conduits")
+                            if (doc.GetElement(elementID).Category != null)
                             {
-                                SelectedElements.Add(doc.GetElement(elementID));
-                            }
-                            else if (doc.GetElement(elementID).Category.Name == "Conduit Fittings")
-                            {
-                                SelectedElements = new List<Element>();
-                                break;
+                                if (doc.GetElement(elementID).Category.Name == "Conduits")
+                                {
+                                    SelectedElements.Add(doc.GetElement(elementID));
+                                }
+                                else if (doc.GetElement(elementID).Category.Name == "Conduit Fittings")
+                                {
+                                    SelectedElements = new List<Element>();
+                                    break;
+                                }
                             }
                         }
-                    }
-                    if (selectedIds.Count > 1)
-                    {
-                        if (doc.GetElement(selectedIds.FirstOrDefault()).Category != null)
+                        if (selectedIds.Count > 1)
                         {
-                            if (doc.GetElement(selectedIds.FirstOrDefault()).Category.Name == "Conduits")
+                            if (doc.GetElement(selectedIds.FirstOrDefault()).Category != null)
                             {
-                                if (window == null)
+                                if (doc.GetElement(selectedIds.FirstOrDefault()).Category.Name == "Conduits")
                                 {
-                                    //ExternalEvent.Create(new WindowOpenCloseHandler()).Raise();
-                                    // var CongridDictionary1 = Utility.GroupByElements(SelectedElements);
-                                    if (SelectedElements != null && SelectedElements.Count > 0)
+                                    if (window == null)
                                     {
-                                        var CongridDictionary1 = GroupStubElements(SelectedElements);
-
-                                        Dictionary<double, List<Element>> group = new Dictionary<double, List<Element>>();
-
-                                        if (CongridDictionary1.Count == 2)
+                                        //ExternalEvent.Create(new WindowOpenCloseHandler()).Raise();
+                                        // var CongridDictionary1 = Utility.GroupByElements(SelectedElements);
+                                        if (SelectedElements != null && SelectedElements.Count > 0)
                                         {
-                                            Dictionary<double, List<Element>> groupPrimary = GroupByElementsWithElevation(CongridDictionary1.First().Value.Select(x => x.Conduit).ToList(), "Middle Elevation");
-                                            Dictionary<double, List<Element>> groupSecondary = GroupByElementsWithElevation(CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList(), "Middle Elevation");
-                                            foreach (var elem in groupPrimary)
+                                            var CongridDictionary1 = GroupStubElements(SelectedElements);
+                                            Dictionary<double, List<Element>> group = new Dictionary<double, List<Element>>();
+                                            if (CongridDictionary1.Count == 2)
                                             {
-                                                foreach (var elem2 in elem.Value)
+                                                Dictionary<double, List<Element>> groupPrimary = GroupByElementsWithElevation(CongridDictionary1.First().Value.Select(x => x.Conduit).ToList(), "Middle Elevation");
+                                                Dictionary<double, List<Element>> groupSecondary = GroupByElementsWithElevation(CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList(), "Middle Elevation");
+                                                foreach (var elem in groupPrimary)
                                                 {
-                                                    DistanceElements.Add(elem2);
-                                                }
-                                            }
-                                            if (groupPrimary.Count > 0 && groupSecondary.Count > 0)
-                                            {
-                                                if (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count)
-                                                {
-                                                    window = new MainWindow();
-                                                    MainWindow.Instance.firstElement = new List<Element>();
-                                                    MainWindow.Instance.firstElement.AddRange(SelectedElements);
-                                                    MainWindow.Instance._document = doc;
-                                                    MainWindow.Instance._uiDocument = uiDoc;
-                                                    MainWindow.Instance._uiApplication = uiApp;
-
-                                                    //window = new MainWindow();
-                                                    window.Show();
-                                                }
-                                                else if (groupSecondary.Count == 1)
-                                                {
-                                                    List<Element> dictFirstElement = CongridDictionary1.First().Value.Select(x => x.Conduit).ToList();
-                                                    List<Element> dictSecondElement = CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList();
-                                                    LocationCurve locCurve1 = dictFirstElement[0].Location as LocationCurve;
-                                                    LocationCurve locCurve2 = dictSecondElement[0].Location as LocationCurve;
-                                                    XYZ startPoint = Utility.GetXYvalue(locCurve1.Curve.GetEndPoint(0));
-                                                    XYZ endPoint = Utility.GetXYvalue(locCurve2.Curve.GetEndPoint(1));
-                                                    Line connectLine = Line.CreateBound(startPoint, endPoint);
-                                                    if (Math.Round(locCurve1.Curve.GetEndPoint(0).Z, 4) == Math.Round(locCurve1.Curve.GetEndPoint(1).Z, 4) &&
-                                                       Math.Round(locCurve2.Curve.GetEndPoint(0).Z, 4) != Math.Round(locCurve2.Curve.GetEndPoint(1).Z, 4))
+                                                    foreach (var elem2 in elem.Value)
                                                     {
-                                                        window = new MainWindow();
-                                                        MainWindow.Instance.firstElement = new List<Element>();
-                                                        MainWindow.Instance.firstElement.AddRange(SelectedElements);
-                                                        MainWindow.Instance._document = doc;
-                                                        MainWindow.Instance._uiDocument = uiDoc;
-                                                        MainWindow.Instance._uiApplication = uiApp;
-
-                                                        //window = new MainWindow();
-                                                        window.Show();
+                                                        DistanceElements.Add(elem2);
                                                     }
-                                                    /* List<Element> OrderSecondary = new List<Element>();
-                                                     Dictionary<double, Element> ordertheUpperElements = new Dictionary<double, Element>();
-                                                     Dictionary<double, Element> ordertheLowerElements = new Dictionary<double, Element>();
-                                                     ordertheUpperElements = new Dictionary<double, Element>();
-                                                     ordertheLowerElements = new Dictionary<double, Element>();
-                                                     foreach (Element conduit in groupSecondary.Select(x => x.Value).FirstOrDefault())
-                                                     {
-                                                         LocationCurve locationCurve = conduit.Location as LocationCurve;
-                                                         if (locationCurve != null)
-                                                         {
-                                                             XYZ sp = locationCurve.Curve.GetEndPoint(0);
-                                                             XYZ ep = locationCurve.Curve.GetEndPoint(1);
-                                                             double Value = (sp.Y);
-                                                             if (!ordertheUpperElements.ContainsKey(Value))
-                                                             {
-                                                                 ordertheUpperElements.Add(Value, conduit);
-                                                             }
-                                                             else
-                                                             {
-                                                                 ordertheLowerElements.Add(Value, conduit);
-                                                             }
-                                                         }
-                                                     }
-                                                     groupSecondary = new Dictionary<double, List<Element>>();
-                                                     ordertheUpperElements = ordertheUpperElements.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                     ordertheLowerElements = ordertheLowerElements.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                     OrderSecondary = new List<Element>();
-                                                     OrderSecondary.AddRange(ordertheUpperElements.Select(e => e.Value));
-                                                     groupSecondary.Add(1, OrderSecondary);
-                                                     OrderSecondary = new List<Element>();
-                                                     OrderSecondary.AddRange(ordertheLowerElements.Select(e => e.Value));
-                                                     groupSecondary.Add(2, OrderSecondary);
-                                                     if (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count)
-                                                     {
-                                                         window = new MainWindow();
-                                                         MainWindow.Instance.firstElement = new List<Element>();
-                                                         MainWindow.Instance.firstElement.AddRange(SelectedElements);
-                                                         MainWindow.Instance._document = doc;
-                                                         MainWindow.Instance._uiDocument = uiDoc;
-                                                         MainWindow.Instance._uiApplication = uiApp;
-
-                                                         //window = new MainWindow();
-                                                         window.Show();
-                                                     }*/
                                                 }
-                                                else
+                                                if (groupPrimary.Count > 0 && groupSecondary.Count > 0)
                                                 {
-                                                    System.Windows.MessageBox.Show("Please select equal count of conduits", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                                    window = new MainWindow();
-                                                    window.Close();
-                                                    ExternalApplication.window = null;
-                                                    SelectedElements.Clear();
-                                                    uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel = null;
-                                            string tabName = "Sanveo Tools";
-                                            string panelName = "AutoUpdate";
-                                            string panelNameAC = "Auto Connect";
-                                            string executableLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                                            string dllLocation = Path.Combine(executableLocation, "AutoUpdaterPro.dll");
-                                            List<Autodesk.Revit.UI.RibbonPanel> panels = uiApp.GetRibbonPanels(tabName);
-                                            Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel01 = panels.FirstOrDefault(p => p.Name == panelName);
-                                            Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel02 = panels.FirstOrDefault(p => p.Name == panelNameAC);
-                                            bool ErrorOccured = false;
-                                            if (autoUpdaterPanel01 != null)
-                                            {
-                                                IList<RibbonItem> items = autoUpdaterPanel01.GetItems();
-                                                foreach (RibbonItem item in items)
-                                                {
-                                                    if (item is PushButton pushButton && pushButton.ItemText == "AutoUpdate ON")
+                                                    //CHECK THE ELEMENTS HAVE BOTH SIDES FITTINGS
+                                                    bool isErrorOccuredinAutoConnect = false;
+                                                    List<Element> groupPrimarySelectedElements = new List<Element>();
+                                                    List<Element> groupSecondarySelectedElements = new List<Element>();
+                                                    groupPrimarySelectedElements = groupPrimary.Select(x => x.Value.FirstOrDefault()).ToList();
+                                                    groupSecondarySelectedElements = groupSecondary.Select(x => x.Value.FirstOrDefault()).ToList();
+                                                    if (groupPrimarySelectedElements != null && groupPrimarySelectedElements.Count > 0)
                                                     {
-                                                        ErrorOccured = true;
+                                                        List<Element> elementlist = new List<Element>();
+                                                        foreach (ElementId id in groupPrimarySelectedElements.Select(x => x.Id))
+                                                        {
+                                                            Element elem = doc.GetElement(id);
+                                                            if (elem.Category != null && elem.Category.Name == "Conduits")
+                                                            {
+                                                                elementlist.Add(elem);
+                                                            }
+                                                        }
+                                                        List<ElementId> FittingElem = new List<ElementId>();
+                                                        for (int i = 0; i < elementlist.Count; i++)
+                                                        {
+                                                            ConnectorSet connector = GetConnectorSet(elementlist[i]);
+                                                            List<ElementId> Icollect = new List<ElementId>();
+                                                            foreach (Connector connect in connector)
+                                                            {
+                                                                ConnectorSet cs1 = connect.AllRefs;
+                                                                foreach (Connector c in cs1)
+                                                                {
+                                                                    Icollect.Add(c.Owner.Id);
+                                                                }
+                                                                foreach (ElementId eid in Icollect)
+                                                                {
+                                                                    if (doc.GetElement(eid) != null && (doc.GetElement(eid).Category != null && doc.GetElement(eid).Category.Name == "Conduit Fittings"))
+                                                                    {
+                                                                        FittingElem.Add(eid);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        List<ElementId> FittingElements = new List<ElementId>();
+                                                        FittingElements = FittingElem.Distinct().ToList();
+                                                        if (FittingElements.Count == (2 * (elementlist.Count)))
+                                                        {
+                                                            isErrorOccuredinAutoConnect = true;
+                                                        }
                                                     }
-                                                    else if (item.ItemText == "AutoUpdate" && !item.Enabled && autoUpdaterPanel02.GetItems().OfType<PushButton>().Any(btn => btn.ItemText == "AutoConnect ON")
-                                                        && autoUpdaterPanel01.GetItems().OfType<PushButton>().Any(btn => btn.ItemText == "AutoUpdate OFF"))
+                                                    if (groupSecondarySelectedElements != null && groupSecondarySelectedElements.Count > 0)
                                                     {
-                                                        ErrorOccured = true;
+                                                        List<Element> elementlist = new List<Element>();
+                                                        foreach (ElementId id in groupSecondarySelectedElements.Select(x => x.Id))
+                                                        {
+                                                            Element elem = doc.GetElement(id);
+                                                            if (elem.Category != null && elem.Category.Name == "Conduits")
+                                                            {
+                                                                elementlist.Add(elem);
+                                                            }
+                                                        }
+                                                        List<ElementId> FittingElem = new List<ElementId>();
+                                                        for (int i = 0; i < elementlist.Count; i++)
+                                                        {
+                                                            ConnectorSet connector = GetConnectorSet(elementlist[i]);
+                                                            List<ElementId> Icollect = new List<ElementId>();
+                                                            foreach (Connector connect in connector)
+                                                            {
+                                                                ConnectorSet cs1 = connect.AllRefs;
+                                                                foreach (Connector c in cs1)
+                                                                {
+                                                                    Icollect.Add(c.Owner.Id);
+                                                                }
+                                                                foreach (ElementId eid in Icollect)
+                                                                {
+                                                                    if (doc.GetElement(eid) != null && (doc.GetElement(eid).Category != null && doc.GetElement(eid).Category.Name == "Conduit Fittings"))
+                                                                    {
+                                                                        FittingElem.Add(eid);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        List<ElementId> FittingElements = new List<ElementId>();
+                                                        FittingElements = FittingElem.Distinct().ToList();
+                                                        if (FittingElements.Count == (2 * (elementlist.Count)))
+                                                        {
+                                                            isErrorOccuredinAutoConnect = true;
+                                                        }
+                                                    }
+                                                    if (isErrorOccuredinAutoConnect)
+                                                    {
                                                         BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
                                                         BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
                                                         ToggleConPakToolsButton.ItemText = "AutoConnect OFF";
@@ -506,21 +475,147 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                         ToggleConPakToolsButton.Image = OffImage;
                                                         ToggleConPakToolsButtonSample.Enabled = true;
                                                     }
+                                                    else
+                                                    {
+                                                        if (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count)
+                                                        {
+                                                            window = new MainWindow();
+                                                            MainWindow.Instance.firstElement = new List<Element>();
+                                                            MainWindow.Instance.firstElement.AddRange(SelectedElements);
+                                                            MainWindow.Instance._document = doc;
+                                                            MainWindow.Instance._uiDocument = uiDoc;
+                                                            MainWindow.Instance._uiApplication = uiApp;
+
+                                                            //window = new MainWindow();
+                                                            window.Show();
+                                                        }
+                                                        else if (groupSecondary.Count == 1)
+                                                        {
+                                                            List<Element> dictFirstElement = CongridDictionary1.First().Value.Select(x => x.Conduit).ToList();
+                                                            List<Element> dictSecondElement = CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList();
+                                                            LocationCurve locCurve1 = dictFirstElement[0].Location as LocationCurve;
+                                                            LocationCurve locCurve2 = dictSecondElement[0].Location as LocationCurve;
+                                                            XYZ startPoint = Utility.GetXYvalue(locCurve1.Curve.GetEndPoint(0));
+                                                            XYZ endPoint = Utility.GetXYvalue(locCurve2.Curve.GetEndPoint(1));
+                                                            Line connectLine = Line.CreateBound(startPoint, endPoint);
+                                                            if (Math.Round(locCurve1.Curve.GetEndPoint(0).Z, 4) == Math.Round(locCurve1.Curve.GetEndPoint(1).Z, 4) &&
+                                                               Math.Round(locCurve2.Curve.GetEndPoint(0).Z, 4) != Math.Round(locCurve2.Curve.GetEndPoint(1).Z, 4))
+                                                            {
+                                                                window = new MainWindow();
+                                                                MainWindow.Instance.firstElement = new List<Element>();
+                                                                MainWindow.Instance.firstElement.AddRange(SelectedElements);
+                                                                MainWindow.Instance._document = doc;
+                                                                MainWindow.Instance._uiDocument = uiDoc;
+                                                                MainWindow.Instance._uiApplication = uiApp;
+
+                                                                //window = new MainWindow();
+                                                                window.Show();
+                                                            }
+                                                            /* List<Element> OrderSecondary = new List<Element>();
+                                                             Dictionary<double, Element> ordertheUpperElements = new Dictionary<double, Element>();
+                                                             Dictionary<double, Element> ordertheLowerElements = new Dictionary<double, Element>();
+                                                             ordertheUpperElements = new Dictionary<double, Element>();
+                                                             ordertheLowerElements = new Dictionary<double, Element>();
+                                                             foreach (Element conduit in groupSecondary.Select(x => x.Value).FirstOrDefault())
+                                                             {
+                                                                 LocationCurve locationCurve = conduit.Location as LocationCurve;
+                                                                 if (locationCurve != null)
+                                                                 {
+                                                                     XYZ sp = locationCurve.Curve.GetEndPoint(0);
+                                                                     XYZ ep = locationCurve.Curve.GetEndPoint(1);
+                                                                     double Value = (sp.Y);
+                                                                     if (!ordertheUpperElements.ContainsKey(Value))
+                                                                     {
+                                                                         ordertheUpperElements.Add(Value, conduit);
+                                                                     }
+                                                                     else
+                                                                     {
+                                                                         ordertheLowerElements.Add(Value, conduit);
+                                                                     }
+                                                                 }
+                                                             }
+                                                             groupSecondary = new Dictionary<double, List<Element>>();
+                                                             ordertheUpperElements = ordertheUpperElements.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                             ordertheLowerElements = ordertheLowerElements.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                             OrderSecondary = new List<Element>();
+                                                             OrderSecondary.AddRange(ordertheUpperElements.Select(e => e.Value));
+                                                             groupSecondary.Add(1, OrderSecondary);
+                                                             OrderSecondary = new List<Element>();
+                                                             OrderSecondary.AddRange(ordertheLowerElements.Select(e => e.Value));
+                                                             groupSecondary.Add(2, OrderSecondary);
+                                                             if (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count)
+                                                             {
+                                                                 window = new MainWindow();
+                                                                 MainWindow.Instance.firstElement = new List<Element>();
+                                                                 MainWindow.Instance.firstElement.AddRange(SelectedElements);
+                                                                 MainWindow.Instance._document = doc;
+                                                                 MainWindow.Instance._uiDocument = uiDoc;
+                                                                 MainWindow.Instance._uiApplication = uiApp;
+
+                                                                 //window = new MainWindow();
+                                                                 window.Show();
+                                                             }*/
+                                                        }
+                                                        else
+                                                        {
+                                                            System.Windows.MessageBox.Show("Please select equal count of conduits", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                            window = new MainWindow();
+                                                            window.Close();
+                                                            ExternalApplication.window = null;
+                                                            SelectedElements.Clear();
+                                                            uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                        }
+                                                    }
                                                 }
                                             }
-                                            if (!ErrorOccured)
+                                            else
                                             {
-                                                if (CongridDictionary1.Count == 1)
+                                                Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel = null;
+                                                string tabName = "Sanveo Tools";
+                                                string panelName = "AutoUpdate";
+                                                string panelNameAC = "Auto Connect";
+                                                string executableLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                                                string dllLocation = Path.Combine(executableLocation, "AutoUpdaterPro.dll");
+                                                List<Autodesk.Revit.UI.RibbonPanel> panels = uiApp.GetRibbonPanels(tabName);
+                                                Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel01 = panels.FirstOrDefault(p => p.Name == panelName);
+                                                Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel02 = panels.FirstOrDefault(p => p.Name == panelNameAC);
+                                                bool ErrorOccured = false;
+                                                if (autoUpdaterPanel01 != null)
                                                 {
-                                                    System.Windows.MessageBox.Show("Please select two equal sets of conduits", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                                    SelectedElements.Clear();
-                                                    uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                    IList<RibbonItem> items = autoUpdaterPanel01.GetItems();
+                                                    foreach (RibbonItem item in items)
+                                                    {
+                                                        if (item is PushButton pushButton && pushButton.ItemText == "AutoUpdate ON")
+                                                        {
+                                                            ErrorOccured = true;
+                                                        }
+                                                        else if (item.ItemText == "AutoUpdate" && !item.Enabled && autoUpdaterPanel02.GetItems().OfType<PushButton>().Any(btn => btn.ItemText == "AutoConnect ON")
+                                                            && autoUpdaterPanel01.GetItems().OfType<PushButton>().Any(btn => btn.ItemText == "AutoUpdate OFF"))
+                                                        {
+                                                            ErrorOccured = true;
+                                                            BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
+                                                            BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
+                                                            ToggleConPakToolsButton.ItemText = "AutoConnect OFF";
+                                                            ToggleConPakToolsButton.LargeImage = OffLargeImage;
+                                                            ToggleConPakToolsButton.Image = OffImage;
+                                                            ToggleConPakToolsButtonSample.Enabled = true;
+                                                        }
+                                                    }
                                                 }
-                                                else
+                                                if (!ErrorOccured)
                                                 {
-                                                    System.Windows.MessageBox.Show("The conduits are at maximum distance or are unaligned", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                                    SelectedElements.Clear();
-                                                    uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                    if (CongridDictionary1.Count == 1)
+                                                    {
+                                                        System.Windows.MessageBox.Show("Please select two equal sets of conduits", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                        SelectedElements.Clear();
+                                                        uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                    }
+                                                    else
+                                                    {
+                                                        System.Windows.MessageBox.Show("The conduits are at maximum distance or are unaligned", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                        SelectedElements.Clear();
+                                                        uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                    }
                                                 }
                                             }
                                         }
@@ -530,6 +625,9 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                         }
                     }
                 }
+            }
+            catch (Exception)
+            {
             }
         }
         #region GROUPING DOUBLE LAYERED
