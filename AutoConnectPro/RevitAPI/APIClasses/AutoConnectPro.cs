@@ -190,10 +190,10 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
             try
             {
                 string s = ToggleConPakToolsButton.ItemText;
-                BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
-                BitmapImage OnImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-on 16x16.png"));
-                BitmapImage OnLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/on 32x32.png"));
-                BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
+                BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-32X32-red.png"));
+                BitmapImage OnImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-16X16-green.png"));
+                BitmapImage OnLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-32X32-green.png"));
+                BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-16X16-red.png"));
                 if (s == "AutoConnect OFF")
                 {
                     ProjectParameterHandler projectParameterHandler = new ProjectParameterHandler();
@@ -268,17 +268,17 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
             string dllLocation = Path.Combine(executableLocation, "AutoConnectPro.dll");
 
             PushButtonData buttondata = new PushButtonData("ModifierBtn", "AutoConnect OFF", dllLocation, "Revit.SDK.Samples.AutoConnectPro.CS.Command");
-            BitmapImage pb1Image = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
+            BitmapImage pb1Image = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-32X32-red.png"));
             buttondata.LargeImage = pb1Image;
-            BitmapImage pb1Image2 = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
+            BitmapImage pb1Image2 = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-16X16-red.png"));
             buttondata.Image = pb1Image2;
             buttondata.AvailabilityClassName = "Revit.SDK.Samples.AutoConnectPro.CS.Availability";
 
             #region Sample PushButton 
             PushButtonData buttondataSample1 = new PushButtonData("ModifierBtnCommandAutoConnect", "AutoConnect", dllLocation, "AutoConnectPro.AutoConnectCommand");
-            BitmapImage pb1ImageSample11 = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/on 32x32.png"));
+            BitmapImage pb1ImageSample11 = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-32X32-green.png"));
             buttondataSample1.LargeImage = pb1ImageSample11;
-            BitmapImage pb1ImageSample12 = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/on 32x32.png"));
+            BitmapImage pb1ImageSample12 = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-16X16-green.png"));
             buttondataSample1.Image = pb1ImageSample12;
             #endregion
 
@@ -471,8 +471,8 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                     }
                                                     if (isErrorOccuredinAutoConnect)
                                                     {
-                                                        BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
-                                                        BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
+                                                        BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-32X32-red.png"));
+                                                        BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-16X16-red.png"));
                                                         ToggleConPakToolsButton.ItemText = "AutoConnect OFF";
                                                         ToggleConPakToolsButton.LargeImage = OffLargeImage;
                                                         ToggleConPakToolsButton.Image = OffImage;
@@ -596,8 +596,8 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                             && autoUpdaterPanel01.GetItems().OfType<PushButton>().Any(btn => btn.ItemText == "AutoUpdate OFF"))
                                                         {
                                                             ErrorOccured = true;
-                                                            BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/off 32x32.png"));
-                                                            BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/switch-off 16x16.png"));
+                                                            BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-32X32-red.png"));
+                                                            BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-16X16-red.png"));
                                                             ToggleConPakToolsButton.ItemText = "AutoConnect OFF";
                                                             ToggleConPakToolsButton.LargeImage = OffLargeImage;
                                                             ToggleConPakToolsButton.Image = OffImage;
