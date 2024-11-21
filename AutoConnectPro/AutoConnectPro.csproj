@@ -147,6 +147,10 @@
     <Content Include="AutoConnectPro.addin">
       <SubType>Designer</SubType>
     </Content>
+    <Resource Include="Resources\Auto-Connect-16X16-green.png" />
+    <Resource Include="Resources\Auto-Connect-16X16-red.png" />
+    <Resource Include="Resources\Auto-Connect-32X32-green.png" />
+    <Resource Include="Resources\Auto-Connect-32X32-red.png" />
     <Resource Include="Resources\off 32x32.png" />
     <Resource Include="Resources\on 32x32.png" />
     <Resource Include="Resources\switch-off 16x16.png" />
