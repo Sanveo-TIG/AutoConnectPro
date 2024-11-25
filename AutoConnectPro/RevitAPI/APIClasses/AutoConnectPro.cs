@@ -388,7 +388,8 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                     List<Element> groupSecondarySelectedElements = new List<Element>();
                                                     groupPrimarySelectedElements = groupPrimary.Select(x => x.Value.FirstOrDefault()).ToList();
                                                     groupSecondarySelectedElements = groupSecondary.Select(x => x.Value.FirstOrDefault()).ToList();
-                                                    if (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count)
+                                                    if ((groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count > 0 && groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count > 0) &&
+                                                        (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count))
                                                     {
                                                         if (groupPrimarySelectedElements != null && groupPrimarySelectedElements.Count > 0)
                                                         {
