@@ -4880,7 +4880,7 @@ namespace AutoConnectPro
                         tx.Commit();
                         doc.Regenerate();
                         successful = true;
-                        _ = Utility.UserActivityLog(System.Reflection.Assembly.GetExecutingAssembly(), uiapp, "Auto Connect", startDate, "Completed", "Vertical Offset", "Public", "Connect");
+                        _ = Utility.UserActivityLog(System.Reflection.Assembly.GetExecutingAssembly(), uiapp, "AutoConnect", startDate, "Completed", "Vertical Offset", "Public", "Connect");
 
                     }
                     using (Transaction tx = new Transaction(doc))
@@ -4894,7 +4894,7 @@ namespace AutoConnectPro
                 {
                     string message = string.Format("Make sure conduits are aligned to each other properly, if not please align primary conduit to secondary conduit. Error :{0}", ex.Message);
                     System.Windows.MessageBox.Show("Warning. \n" + message, "Alert", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    _ = Utility.UserActivityLog(System.Reflection.Assembly.GetExecutingAssembly(), uiapp, "Auto Connect", startDate, "Failed", "Vertical Offset", "Public", "Connect");
+                    _ = Utility.UserActivityLog(System.Reflection.Assembly.GetExecutingAssembly(), uiapp, "AutoConnect", startDate, "Failed", "Vertical Offset", "Public", "Connect");
                     successful = false;
                 }
             }
@@ -4902,7 +4902,7 @@ namespace AutoConnectPro
             {
                 System.Windows.MessageBox.Show("Warning. \n" + exception.Message, "Alert", MessageBoxButton.OK, MessageBoxImage.Warning);
                 successful = false;
-                _ = Utility.UserActivityLog(System.Reflection.Assembly.GetExecutingAssembly(), uiapp, "Auto Connect", startDate, "Failed", "Vertical Offset", "Public", "Connect");
+                _ = Utility.UserActivityLog(System.Reflection.Assembly.GetExecutingAssembly(), uiapp, "AutoConnect", startDate, "Failed", "Vertical Offset", "Public", "Connect");
             }
         }
         #region funct

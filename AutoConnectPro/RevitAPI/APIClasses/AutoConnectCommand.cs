@@ -23,7 +23,7 @@ namespace AutoConnectPro
             {
                 if (Utility.HasValidLicense("Public"))
                 {
-                    if (Utility.ReadPremiumLicense("Auto Connect"))
+                    if (Utility.ReadPremiumLicense("AutoConnect"))
                     {
                         CustomUIApplication customUIApplication = new CustomUIApplication
                         {

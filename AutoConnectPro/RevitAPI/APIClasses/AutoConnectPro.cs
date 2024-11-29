@@ -241,7 +241,7 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                 {
                     foreach (Autodesk.Windows.RibbonPanel panel in tab.Panels)
                     {
-                        if (panel.Source.Title == "Auto Connect")
+                        if (panel.Source.Title == "AutoConnect")
                         {
                             foreach (var button in panel.Source.Items)
                             {
@@ -295,7 +295,7 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
         public Autodesk.Revit.UI.RibbonPanel RibbonPanel(UIControlledApplication a)
         {
             string tab = "Sanveo Tools"; // Archcorp
-            string ribbonPanelText = "Auto Connect"; // Architecture
+            string ribbonPanelText = "AutoConnect"; // Architecture
 
             // Empty ribbon panel 
             Autodesk.Revit.UI.RibbonPanel ribbonPanel = null;
@@ -577,7 +577,7 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                 Autodesk.Revit.UI.RibbonPanel autoUpdaterPanel = null;
                                                 string tabName = "Sanveo Tools";
                                                 string panelName = "AutoUpdate";
-                                                string panelNameAC = "Auto Connect";
+                                                string panelNameAC = "AutoConnect";
                                                 string executableLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                                                 string dllLocation = Path.Combine(executableLocation, "AutoUpdaterPro.dll");
                                                 List<Autodesk.Revit.UI.RibbonPanel> panels = uiApp.GetRibbonPanels(tabName);
