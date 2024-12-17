@@ -137,6 +137,8 @@ namespace AutoConnectPro
                                 Window window = new MainWindow();
                                 window.Show();
                                 MainWindow.Instance.isStaticTool = true;
+                                if (ExternalApplication.ToggleConPakToolsButtonSample != null)
+                                    ExternalApplication.ToggleConPakToolsButtonSample.Enabled = false;
                                 iswhenReloadTool = false;
                                 //MainWindow.Instance.IsPopupOpened = false;
                                 //MainWindow.Instance.popupBox.IsPopupOpen = false;
