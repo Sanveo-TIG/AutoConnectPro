@@ -627,6 +627,7 @@ namespace AutoConnectPro
                                                 roundOFF.Add(roundedXYZ);
                                             }
                                             bool hasDuplicateY = HasDuplicateYCoordinates(roundOFF);
+                                            bool hasDuplicateX = HasDuplicateXCoordinates(roundOFF);
                                             Dictionary<double, List<Element>> dictSecondaryElementKick = new Dictionary<double, List<Element>>();
                                             if (hasDuplicateY)
                                             {
@@ -769,6 +770,136 @@ namespace AutoConnectPro
                                         }
                                         else
                                         {
+                                            /*#region kick Order Method
+                                            Dictionary<double, List<Element>> sortedGroupPrimary = groupPrimary.OrderByDescending(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                            foreach (KeyValuePair<double, List<Element>> pair in groupPrimary)
+                                            {
+                                                GroupedPrimaryElement.AddRange(pair.Value);
+                                            }
+                                            //Grouping Logic
+                                            List<XYZ> xyzPS = multiordertheSecondaryElements.Select(x => x.Key).ToList();
+                                            List<XYZ> roundOFF = new List<XYZ>();
+                                            foreach (var xyz in xyzPS)
+                                            {
+                                                XYZ roundedXYZ = new XYZ(Math.Round(xyz.X, 5), Math.Round(xyz.Y, 5), Math.Round(xyz.Z, 5));
+                                                roundOFF.Add(roundedXYZ);
+                                            }
+                                            bool hasDuplicateY = HasDuplicateYCoordinates(roundOFF);
+                                            bool hasDuplicateX = HasDuplicateXCoordinates(roundOFF);
+                                            Dictionary<double, List<Element>> dictSecondaryElementKick = new Dictionary<double, List<Element>>();
+                                            if (hasDuplicateY || hasDuplicateX)
+                                            {
+                                                _previousXYZ = null;
+                                                int i = 0;
+                                                do
+                                                {
+                                                    List<XYZ> xyzListPrimary = new List<XYZ>();
+                                                    List<XYZ> xyzListSecondary = new List<XYZ>();
+                                                    xyzListSecondary.AddRange(multiordertheSecondaryElements.Select(x => x.Key));
+                                                    List<Element> Sele = FindCornerConduitsKick(multiordertheSecondaryElements, xyzListSecondary, doc, isangledVerticalConduits, primaryelementCount);
+                                                    dictSecondaryElementKick.Add(i, Sele);
+                                                    GroupedSecondaryElement.AddRange(Sele);
+                                                    i++;
+                                                    multiordertheSecondaryElements = multiordertheSecondaryElements.Where(kvp => !GroupedSecondaryElement.Any(e => e.Id == kvp.Value.Id))
+                                                                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                }
+                                                while (multiordertheSecondaryElements.Count > 0);
+                                            }
+                                            else
+                                            {
+                                                isangledVerticalConduits = true;
+                                                _previousXYZ = null;
+                                                int i = 0;
+                                                do
+                                                {
+                                                    List<XYZ> xyzListPrimary = new List<XYZ>();
+                                                    List<XYZ> xyzListSecondary = new List<XYZ>();
+                                                    xyzListSecondary.AddRange(multiordertheSecondaryElements.Select(x => x.Key));
+                                                    List<Element> Sele = FindCornerConduitsKick(multiordertheSecondaryElements, xyzListSecondary, doc, isangledVerticalConduits, primaryelementCount);
+                                                    dictSecondaryElementKick.Add(i, Sele);
+                                                    GroupedSecondaryElement.AddRange(Sele);
+                                                    i++;
+                                                    multiordertheSecondaryElements = multiordertheSecondaryElements.Where(kvp => !GroupedSecondaryElement.Any(e => e.Id == kvp.Value.Id))
+                                                                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                }
+                                                while (multiordertheSecondaryElements.Count > 0);
+                                            }
+                                            //Find Maximum Distance Line for Layer Matching
+                                            int o = 0;
+                                            do
+                                            {
+                                                Dictionary<Line, Element> _dictlineelement = new Dictionary<Line, Element>();
+                                                List<Element> highestElevation = sortedGroupPrimary.Values.FirstOrDefault();
+                                                List<Element> storedSecondaryElement = new List<Element>();
+                                                for (int i = 0; i < 1; i++)
+                                                {
+                                                    ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(highestElevation[i]);
+                                                    foreach (KeyValuePair<double, List<Element>> dec in dictSecondaryElementKick)
+                                                    {
+                                                        ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(dec.Value.FirstOrDefault());
+                                                        Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                                        Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
+                                                        doc.Create.NewDetailCurve(doc.ActiveView, checkline);
+                                                        _dictlineelement.Add(checkline, dec.Value.FirstOrDefault());
+                                                    }
+                                                    double secElevation = (((dictSecondaryElementKick.Values.FirstOrDefault().FirstOrDefault().Location as LocationCurve).Curve) as Line).Origin.Z;
+                                                    double priElevation = (((highestElevation[i].Location as LocationCurve).Curve) as Line).Origin.Z;
+                                                    Line distanceLine = null;
+                                                    if (priElevation > secElevation)
+                                                    {
+                                                        distanceLine = _dictlineelement.Keys.OrderByDescending(line => line.Length).FirstOrDefault();
+                                                    }
+                                                    else if (priElevation < secElevation)
+                                                    {
+                                                        distanceLine = _dictlineelement.Keys.OrderBy(line => line.Length).FirstOrDefault();
+                                                    }
+                                                    Element distanceLineElement = _dictlineelement.Where(kvp => kvp.Key == distanceLine).Select(kvp => kvp.Value).FirstOrDefault();
+                                                    List<Element> sec = dictSecondaryElementKick.Where(kvp => kvp.Value.Any(x => x == distanceLineElement))
+                                                                                                .Select(kvp => kvp.Value).FirstOrDefault();
+
+                                                    Dictionary<XYZ, Element> orderXYZSingle = new Dictionary<XYZ, Element>();//orderXYZ
+                                                    foreach (Element secele in sec)
+                                                    {
+                                                        XYZ xyz = (((secele.Location as LocationCurve).Curve) as Line).Origin;
+                                                        orderXYZSingle.Add(xyz, secele);
+                                                    }
+                                                    orderXYZSingle = orderXYZSingle.OrderByDescending(kvp => kvp.Key.Y).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                    List<Element> secOrderSingle = orderXYZSingle.Select(x => x.Value).ToList();
+                                                    _secondKickGroup.AddRange(secOrderSingle);
+                                                    storedSecondaryElement.AddRange(secOrderSingle);
+                                                    _dictReorder.Add(o, storedSecondaryElement);
+                                                    o++;
+                                                    dictSecondaryElementKick.Remove(dictSecondaryElementKick.FirstOrDefault(kvp => kvp.Value == sec).Key);
+                                                    if (dictSecondaryElementKick.Count == 1)
+                                                    {
+                                                        storedSecondaryElement = new List<Element>();
+                                                        orderXYZSingle = new Dictionary<XYZ, Element>();
+                                                        foreach (Element secele in dictSecondaryElementKick.Values.FirstOrDefault())
+                                                        {
+                                                            XYZ xyz = (((secele.Location as LocationCurve).Curve) as Line).Origin;
+                                                            orderXYZSingle.Add(xyz, secele);
+                                                        }
+                                                        orderXYZSingle = orderXYZSingle.OrderByDescending(kvp => kvp.Key.Y).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                        secOrderSingle = orderXYZSingle.Select(x => x.Value).ToList();
+                                                        _secondKickGroup.AddRange(secOrderSingle);
+                                                        storedSecondaryElement.AddRange(secOrderSingle);
+                                                        _dictReorder.Add(o, storedSecondaryElement);
+                                                        dictSecondaryElementKick.Clear();
+                                                    }
+                                                }
+                                                List<Element> pri = sortedGroupPrimary.Where(kvp => kvp.Value.Any(x => x == highestElevation.FirstOrDefault()))
+                                                                                      .Select(kvp => kvp.Value).FirstOrDefault();
+                                                _firstKickGroup.AddRange(pri);
+                                                sortedGroupPrimary.Remove(sortedGroupPrimary.FirstOrDefault(kvp => kvp.Value == pri).Key);
+                                                if (sortedGroupPrimary.Count == 1)
+                                                {
+                                                    _firstKickGroup.AddRange(sortedGroupPrimary.Values.FirstOrDefault());
+                                                    sortedGroupPrimary.Clear();
+                                                }
+                                            }
+                                            while (sortedGroupPrimary.Count > 1 && sortedGroupPrimary.Count == dictSecondaryElementKick.Count);
+                                            #endregion*/
+                                            #region Kick Try Catch Method
                                             Dictionary<XYZ, Element> orderXYZ = new Dictionary<XYZ, Element>();
                                             foreach (Element secele in dictSecondElement)
                                             {
@@ -804,6 +935,7 @@ namespace AutoConnectPro
                                                     //ApplyKick(doc, _uiapp, secOrder, priOrder, offsetVariable);
                                                 }
                                             }
+                                            #endregion
                                         }
                                         if (!MainWindow.Instance.isStaticTool)
                                         {
@@ -1525,6 +1657,19 @@ namespace AutoConnectPro
                 if (!uniqueYCoordinates.Add(point.Y))
                 {
                     return true; // Duplicate Y found
+                }
+            }
+            return false; // No duplicates found
+        }
+        private static bool HasDuplicateXCoordinates(List<XYZ> points)
+        {
+            HashSet<double> uniqueXCoordinates = new HashSet<double>();
+
+            foreach (var point in points)
+            {
+                if (!uniqueXCoordinates.Add(point.X))
+                {
+                    return true; // Duplicate X found
                 }
             }
             return false; // No duplicates found
