@@ -680,8 +680,8 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                         if (CongridDictionary1.Count == 1)
                                                         {
                                                             //System.Windows.MessageBox.Show("Please select two equal sets of conduits", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                                            //SelectedElements.Clear();
-                                                            //uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                            SelectedElements.Clear();
+                                                            uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
                                                         }
                                                         else
                                                         {
