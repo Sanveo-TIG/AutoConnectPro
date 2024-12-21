@@ -671,6 +671,7 @@ namespace AutoConnectPro
                                             do
                                             {
                                                 Dictionary<Line, Element> _dictlineelement = new Dictionary<Line, Element>();
+                                                List<Element> priReverseorNot = new List<Element>();
                                                 List<Element> highestElevation = sortedGroupPrimary.Values.FirstOrDefault();
                                                 List<Element> storedSecondaryElement = new List<Element>();
                                                 for (int i = 0; i < 1; i++)
@@ -698,6 +699,30 @@ namespace AutoConnectPro
                                                     Element distanceLineElement = _dictlineelement.Where(kvp => kvp.Key == distanceLine).Select(kvp => kvp.Value).FirstOrDefault();
                                                     List<Element> sec = dictSecondaryElementKick.Where(kvp => kvp.Value.Any(x => x == distanceLineElement))
                                                                                                 .Select(kvp => kvp.Value).FirstOrDefault();
+
+                                                    /*priReverseorNot = sortedGroupPrimary.Where(kvp => kvp.Value.Any(x => x == highestElevation.FirstOrDefault())).Select(kvp => kvp.Value).FirstOrDefault();
+                                                    List<Line> previousLine = new List<Line>();
+                                                    bool isReverseDone = false;
+                                                    for (int z = 0; z < sec.Count; z++)
+                                                    {
+                                                        ConnectorSet PrimaryConnectorsMulti = Utility.GetConnectorSet(priReverseorNot[z]);
+                                                        ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(sec[z]);
+                                                        Utility.GetClosestConnectors(PrimaryConnectorsMulti, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                                        Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
+                                                        doc.Create.NewDetailCurve(doc.ActiveView, checkline);
+                                                        foreach (Line pl in previousLine)
+                                                        {
+                                                            if (Utility.GetIntersection(pl, checkline) != null)
+                                                            {
+                                                                priReverseorNot.Reverse();
+                                                                isReverseDone = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (isReverseDone)
+                                                            break;
+                                                        previousLine.Add(checkline);
+                                                    }*/
 
                                                     Dictionary<XYZ, Element> orderXYZ = new Dictionary<XYZ, Element>();
                                                     foreach (Element secele in sec)
@@ -729,8 +754,7 @@ namespace AutoConnectPro
                                                         dictSecondaryElementKick.Clear();
                                                     }
                                                 }
-                                                List<Element> pri = sortedGroupPrimary.Where(kvp => kvp.Value.Any(x => x == highestElevation.FirstOrDefault()))
-                                                                                      .Select(kvp => kvp.Value).FirstOrDefault();
+                                                List<Element> pri = sortedGroupPrimary.Where(kvp => kvp.Value.Any(x => x == highestElevation.FirstOrDefault())).Select(kvp => kvp.Value).FirstOrDefault();
                                                 _firstKickGroup.AddRange(pri);
                                                 sortedGroupPrimary.Remove(sortedGroupPrimary.FirstOrDefault(kvp => kvp.Value == pri).Key);
                                                 if (sortedGroupPrimary.Count == 1)
@@ -770,8 +794,7 @@ namespace AutoConnectPro
                                         }
                                         else
                                         {
-                                            /*#region kick Order Method
-                                            Dictionary<double, List<Element>> sortedGroupPrimary = groupPrimary.OrderByDescending(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                            #region kick Order Method
                                             foreach (KeyValuePair<double, List<Element>> pair in groupPrimary)
                                             {
                                                 GroupedPrimaryElement.AddRange(pair.Value);
@@ -824,99 +847,29 @@ namespace AutoConnectPro
                                                 }
                                                 while (multiordertheSecondaryElements.Count > 0);
                                             }
-                                            //Find Maximum Distance Line for Layer Matching
-                                            int o = 0;
-                                            do
-                                            {
-                                                Dictionary<Line, Element> _dictlineelement = new Dictionary<Line, Element>();
-                                                List<Element> highestElevation = sortedGroupPrimary.Values.FirstOrDefault();
-                                                List<Element> storedSecondaryElement = new List<Element>();
-                                                for (int i = 0; i < 1; i++)
-                                                {
-                                                    ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(highestElevation[i]);
-                                                    foreach (KeyValuePair<double, List<Element>> dec in dictSecondaryElementKick)
-                                                    {
-                                                        ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(dec.Value.FirstOrDefault());
-                                                        Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
-                                                        Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
-                                                        doc.Create.NewDetailCurve(doc.ActiveView, checkline);
-                                                        _dictlineelement.Add(checkline, dec.Value.FirstOrDefault());
-                                                    }
-                                                    double secElevation = (((dictSecondaryElementKick.Values.FirstOrDefault().FirstOrDefault().Location as LocationCurve).Curve) as Line).Origin.Z;
-                                                    double priElevation = (((highestElevation[i].Location as LocationCurve).Curve) as Line).Origin.Z;
-                                                    Line distanceLine = null;
-                                                    if (priElevation > secElevation)
-                                                    {
-                                                        distanceLine = _dictlineelement.Keys.OrderByDescending(line => line.Length).FirstOrDefault();
-                                                    }
-                                                    else if (priElevation < secElevation)
-                                                    {
-                                                        distanceLine = _dictlineelement.Keys.OrderBy(line => line.Length).FirstOrDefault();
-                                                    }
-                                                    Element distanceLineElement = _dictlineelement.Where(kvp => kvp.Key == distanceLine).Select(kvp => kvp.Value).FirstOrDefault();
-                                                    List<Element> sec = dictSecondaryElementKick.Where(kvp => kvp.Value.Any(x => x == distanceLineElement))
-                                                                                                .Select(kvp => kvp.Value).FirstOrDefault();
 
-                                                    Dictionary<XYZ, Element> orderXYZSingle = new Dictionary<XYZ, Element>();//orderXYZ
-                                                    foreach (Element secele in sec)
-                                                    {
-                                                        XYZ xyz = (((secele.Location as LocationCurve).Curve) as Line).Origin;
-                                                        orderXYZSingle.Add(xyz, secele);
-                                                    }
-                                                    orderXYZSingle = orderXYZSingle.OrderByDescending(kvp => kvp.Key.Y).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                    List<Element> secOrderSingle = orderXYZSingle.Select(x => x.Value).ToList();
-                                                    _secondKickGroup.AddRange(secOrderSingle);
-                                                    storedSecondaryElement.AddRange(secOrderSingle);
-                                                    _dictReorder.Add(o, storedSecondaryElement);
-                                                    o++;
-                                                    dictSecondaryElementKick.Remove(dictSecondaryElementKick.FirstOrDefault(kvp => kvp.Value == sec).Key);
-                                                    if (dictSecondaryElementKick.Count == 1)
-                                                    {
-                                                        storedSecondaryElement = new List<Element>();
-                                                        orderXYZSingle = new Dictionary<XYZ, Element>();
-                                                        foreach (Element secele in dictSecondaryElementKick.Values.FirstOrDefault())
-                                                        {
-                                                            XYZ xyz = (((secele.Location as LocationCurve).Curve) as Line).Origin;
-                                                            orderXYZSingle.Add(xyz, secele);
-                                                        }
-                                                        orderXYZSingle = orderXYZSingle.OrderByDescending(kvp => kvp.Key.Y).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                        secOrderSingle = orderXYZSingle.Select(x => x.Value).ToList();
-                                                        _secondKickGroup.AddRange(secOrderSingle);
-                                                        storedSecondaryElement.AddRange(secOrderSingle);
-                                                        _dictReorder.Add(o, storedSecondaryElement);
-                                                        dictSecondaryElementKick.Clear();
-                                                    }
-                                                }
-                                                List<Element> pri = sortedGroupPrimary.Where(kvp => kvp.Value.Any(x => x == highestElevation.FirstOrDefault()))
-                                                                                      .Select(kvp => kvp.Value).FirstOrDefault();
-                                                _firstKickGroup.AddRange(pri);
-                                                sortedGroupPrimary.Remove(sortedGroupPrimary.FirstOrDefault(kvp => kvp.Value == pri).Key);
-                                                if (sortedGroupPrimary.Count == 1)
+                                            List<Line> previousLine = new List<Line>();
+                                            bool isReverseDone = false;
+                                            for (int z = 0; z < GroupedSecondaryElement.Count; z++)
+                                            {
+                                                ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(GroupedPrimaryElement[z]);
+                                                ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(GroupedSecondaryElement[z]);
+                                                Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                                Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
+                                                //doc.Create.NewDetailCurve(doc.ActiveView, checkline);
+                                                foreach (Line pl in previousLine)
                                                 {
-                                                    _firstKickGroup.AddRange(sortedGroupPrimary.Values.FirstOrDefault());
-                                                    sortedGroupPrimary.Clear();
+                                                    if (Utility.GetIntersection(pl, checkline) != null)
+                                                    {
+                                                        GroupedPrimaryElement.Reverse();
+                                                        isReverseDone = true;
+                                                        break;
+                                                    }
                                                 }
+                                                if (isReverseDone)
+                                                    break;
+                                                previousLine.Add(checkline);
                                             }
-                                            while (sortedGroupPrimary.Count > 1 && sortedGroupPrimary.Count == dictSecondaryElementKick.Count);
-                                            #endregion*/
-                                            #region Kick Try Catch Method
-                                            Dictionary<XYZ, Element> orderXYZ = new Dictionary<XYZ, Element>();
-                                            foreach (Element secele in dictSecondElement)
-                                            {
-                                                XYZ xyz = (((secele.Location as LocationCurve).Curve) as Line).Origin;
-                                                orderXYZ.Add(xyz, secele);
-                                            }
-                                            orderXYZ = orderXYZ.OrderByDescending(kvp => kvp.Key.Y).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                            List<Element> secOrder = orderXYZ.Select(x => x.Value).ToList();
-                                            orderXYZ = new Dictionary<XYZ, Element>();
-                                            foreach (Element priele in dictFirstElement)
-                                            {
-                                                XYZ xyz = (((priele.Location as LocationCurve).Curve) as Line).Origin;
-                                                orderXYZ.Add(xyz, priele);
-                                            }
-                                            orderXYZ = orderXYZ.OrderByDescending(kvp => kvp.Key.X).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                            //List<Element> priOrder = groupPrimary.FirstOrDefault().Value;
-                                            List<Element> priOrder = orderXYZ.Select(x => x.Value).ToList();
                                             if (elementsList is Conduit && elementsList != null)
                                             {
                                                 XYZ xyz = ((elementsList.Location as LocationCurve).Curve as Line).Direction;
@@ -924,15 +877,13 @@ namespace AutoConnectPro
                                                 {
                                                     //90 Kick Far
                                                     isfar = true;
-                                                    ApplyKick(doc, _uiapp, dictFirstElement, dictSecondElement, offsetVariable);
-                                                    //ApplyKick(doc, _uiapp, priOrder, secOrder, offsetVariable);
+                                                    ApplyKick(doc, _uiapp, GroupedPrimaryElement, GroupedSecondaryElement, offsetVariable);
                                                 }
                                                 else
                                                 {
                                                     //90 Kick Near
                                                     isfar = false;
-                                                    ApplyKick(doc, _uiapp, dictSecondElement, dictFirstElement, offsetVariable);
-                                                    //ApplyKick(doc, _uiapp, secOrder, priOrder, offsetVariable);
+                                                    ApplyKick(doc, _uiapp, GroupedSecondaryElement, GroupedPrimaryElement, offsetVariable);
                                                 }
                                             }
                                             #endregion
@@ -2352,12 +2303,6 @@ namespace AutoConnectPro
                         reversePrimaryElements.Add(PrimaryElements[a]);
                     }
                 }
-                /*List<ConnectorSet> css = new List<ConnectorSet>();
-                for (int j = PrimaryElements.Count - 1; j >= 0; j--)
-                {
-                    ConnectorSet reversePrimaryConnectors = Utility.GetConnectorSet(PrimaryElements[j]);
-                    css.Add(reversePrimaryConnectors);
-                }*/
                 for (int i = 0; i < PrimaryElements.Count; i++)
                 {
                     double elevation = SecondaryElements[i].LookupParameter(offSetVar).AsDouble();
@@ -2376,733 +2321,101 @@ namespace AutoConnectPro
                     Conduit newConduit = null;
                     Line axisLine = null;
                     FamilyInstance f1 = null;
-                    #region
-                    if (GroupPrimaryCount == 1)
+
+                    if (isfar)
                     {
-                        #region Kick Single Layer TryCatch Method
                         try
                         {
-                            if (_DescendingElementwithPositiveAngle)
+                            Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
+                            XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
+                            XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
+                            newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
+                            axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
+                            if (isCatch)
                             {
-                                #region DESCENDING ELEMENT WITH POSITIVE ANGLE
-                                if (isfar)
-                                {
-                                    Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                    XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                }
-                                else
-                                {
-                                    Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                       new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                    XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                    XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-
-                                    }
-                                }
-                                #endregion
-                            }
-                            else if (_AscendingElementwithNegativeAngle)
-                            {
-                                #region ASCENDING ELEMENT WITH NEGATIVE ANGLE
-                                if (isfar)
-                                {
-                                    Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                    XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(0);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(0);
-                                    }
-                                }
-                                else
-                                {
-                                    Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                       new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                    XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                    XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(0);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(0);
-                                    }
-                                }
-                                #endregion
-                            }
-                            else if (_DescendingElementwithNegativeAngle)
-                            {
-                                #region DECENDING ELEMENT WITH NEGATIVE ANGLE
-                                if (isfar)
-                                {
-                                    Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                    XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                }
-                                else
-                                {
-                                    Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                       new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                    XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                    XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                }
-                                #endregion
+                                ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
                             }
                             else
                             {
-                                #region ASCENDING ELEMENT WITH POSITIVE ANGLE
-                                if (isfar)
-                                {
-                                    Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                    XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        //Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(0);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(0);
-                                    }
-                                }
-                                else
-                                {
-                                    Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                       new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                    XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                    XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        //Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                        //css.RemoveAt(0);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                }
-                                #endregion
+                                ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
                             }
+                            Element newElement = doc.GetElement(newConduit.Id);
+                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
+                            Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
+                            Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
+                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
+                            Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
                         }
                         catch
                         {
-                            try
-                            {
-                                #region DESCENDING ELEMENT WITH POSITIVE ANGLE
-                                if (newConduit != null)
-                                    doc.Delete(newConduit.Id);
-                                if (f1 != null)
-                                    doc.Delete(f1.Id);
-                                if (isfar)
-                                {
-                                    Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                    XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                }
-                                else
-                                {
-                                    Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                       new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                    XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                    XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                    XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                    if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-                                    }
-                                    else
-                                    {
-                                        newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                        axisLine = secondLine;
-                                        ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                        Element newElement = doc.GetElement(newConduit.Id);
-                                        ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                        Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                        Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                        f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                        css.RemoveAt(css.Count - 1);
-
-                                    }
-                                }
-                                _DescendingElementwithPositiveAngle = true;
-                                #endregion
-                            }
-                            catch
-                            {
-                                try
-                                {
-                                    #region ASCENDING ELEMENT WITH NEGATIVE ANGLE
-                                    if (newConduit != null)
-                                        doc.Delete(newConduit.Id);
-                                    if (f1 != null)
-                                        doc.Delete(f1.Id);
-                                    if (isfar)
-                                    {
-                                        Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                        XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                        XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                        if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                        {
-                                            newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                            axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                            Element newElement = doc.GetElement(newConduit.Id);
-                                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                            Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                            Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                            Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                            css.RemoveAt(0);
-                                        }
-                                        else
-                                        {
-                                            newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                            axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                            Element newElement = doc.GetElement(newConduit.Id);
-                                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                            Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                            Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                            Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                            css.RemoveAt(0);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                           new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                        XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                        XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                        XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                        if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                        {
-                                            newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                            axisLine = secondLine;
-                                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                            Element newElement = doc.GetElement(newConduit.Id);
-                                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                            Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                            Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                            Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                            css.RemoveAt(0);
-                                        }
-                                        else
-                                        {
-                                            newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                            axisLine = secondLine;
-                                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                            Element newElement = doc.GetElement(newConduit.Id);
-                                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                            Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                            Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                            Utility.CreateElbowFittings(css.FirstOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                            css.RemoveAt(0);
-                                        }
-                                    }
-                                    _AscendingElementwithNegativeAngle = true;
-                                    #endregion
-                                }
-                                catch
-                                {
-                                    #region DECENDING ELEMENT WITH NEGATIVE ANGLE
-                                    if (newConduit != null)
-                                        doc.Delete(newConduit.Id);
-                                    if (f1 != null)
-                                        doc.Delete(f1.Id);
-                                    if (isfar)
-                                    {
-                                        Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                        XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                        XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                        if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                        {
-                                            newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                            axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                            Element newElement = doc.GetElement(newConduit.Id);
-                                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                            Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                            Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                            Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                            css.RemoveAt(css.Count - 1);
-                                        }
-                                        else
-                                        {
-                                            newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                            axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                            Element newElement = doc.GetElement(newConduit.Id);
-                                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                            Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                            Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                            Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                            css.RemoveAt(css.Count - 1);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                           new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                        XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                        XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                        XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                        if (((Autodesk.Revit.DB.MEPCurve)PrimaryElements[i]).Diameter == ((Autodesk.Revit.DB.MEPCurve)SecondaryElements[i]).Diameter)
-                                        {
-                                            newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                            axisLine = secondLine;
-                                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                            Element newElement = doc.GetElement(newConduit.Id);
-                                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                            Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                            Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                            Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                            css.RemoveAt(css.Count - 1);
-                                        }
-                                        else
-                                        {
-                                            newConduit = Utility.CreateConduit(doc, reversePrimaryElements[i], thirdStartPoint, thirdEndPoind);
-                                            axisLine = secondLine;
-                                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                            Element newElement = doc.GetElement(newConduit.Id);
-                                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                            Utility.RetainParameters(reversePrimaryElements[i], SecondaryElements[i], uiApp);
-                                            Utility.RetainParameters(reversePrimaryElements[i], newElement, uiApp);
-                                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                            Utility.CreateElbowFittings(css.LastOrDefault(), ThirdConnectors, doc, uiApp, reversePrimaryElements[i], true);
-                                            css.RemoveAt(css.Count - 1);
-                                        }
-                                    }
-                                    _DescendingElementwithNegativeAngle = true;
-                                    #endregion
-                                }
-                            }
+                            isCatch = true;
+                            if (newConduit != null)
+                                doc.Delete(newConduit.Id);
+                            if (f1 != null)
+                                doc.Delete(f1.Id);
+                            Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
+                            XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
+                            XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
+                            newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
+                            axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
+                            Element newElement = doc.GetElement(newConduit.Id);
+                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
+                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
+                            Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
+                            Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
+                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
+                            Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
                         }
-                        #endregion
-
-                        /*if (isfar)
-                        {
-                            try
-                            {
-                                Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                if (isCatch)
-                                {
-                                    ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                }
-                                else
-                                {
-                                    ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                }
-                                Element newElement = doc.GetElement(newConduit.Id);
-                                ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                            }
-                            catch
-                            {
-                                isCatch = true;
-                                if (newConduit != null)
-                                    doc.Delete(newConduit.Id);
-                                if (f1 != null)
-                                    doc.Delete(f1.Id);
-                                Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                Element newElement = doc.GetElement(newConduit.Id);
-                                ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                            }
-                        }
-                        else
-                        {
-                            try
-                            {
-                                Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                           new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                axisLine = secondLine;
-                                if (isCatch)
-                                {
-                                    ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                }
-                                else
-                                {
-                                    ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                }
-                                Element newElement = doc.GetElement(newConduit.Id);
-                                ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                            }
-                            catch
-                            {
-                                isCatch = true;
-                                if (newConduit != null)
-                                    doc.Delete(newConduit.Id);
-                                if (f1 != null)
-                                {
-                                    doc.Delete(f1.Id);
-                                }
-                                Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                           new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                axisLine = secondLine;
-                                ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                Element newElement = doc.GetElement(newConduit.Id);
-                                ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                            }
-                        }*/
                     }
                     else
                     {
-                        if (isfar)
+                        try
                         {
-                            try
+                            Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
+                                       new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
+                            XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
+                            XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
+                            XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
+                            newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
+                            axisLine = secondLine;
+                            if (isCatch)
                             {
-                                Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                if (isCatch)
-                                {
-                                    ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                }
-                                else
-                                {
-                                    ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                }
-                                Element newElement = doc.GetElement(newConduit.Id);
-                                ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                            }
-                            catch
-                            {
-                                isCatch = true;
-                                if (newConduit != null)
-                                    doc.Delete(newConduit.Id);
-                                if (f1 != null)
-                                    doc.Delete(f1.Id);
-                                Line horizontalLine = Line.CreateBound(ConnectorOne.Origin, (stPt + edPt) / 2);
-                                XYZ thirdStartPoint = new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z);
-                                XYZ thirdEndPoind = thirdStartPoint + horizontalLine.Direction.Multiply(5);
-                                newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                axisLine = Line.CreateBound(thirdStartPoint, new XYZ(thirdStartPoint.X, thirdStartPoint.Y, thirdStartPoint.Z + 10));
-                                Element newElement = doc.GetElement(newConduit.Id);
                                 ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
                             }
+                            else
+                            {
+                                ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
+                            }
+                            Element newElement = doc.GetElement(newConduit.Id);
+                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
+                            Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
+                            Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
+                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
+                            Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
                         }
-                        else
+                        catch
                         {
-                            try
-                            {
-                                Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                           new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                axisLine = secondLine;
-                                if (isCatch)
-                                {
-                                    ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                }
-                                else
-                                {
-                                    ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, angle);
-                                }
-                                Element newElement = doc.GetElement(newConduit.Id);
-                                ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                            }
-                            catch
-                            {
-                                isCatch = true;
-                                if (newConduit != null)
-                                    doc.Delete(newConduit.Id);
-                                if (f1 != null)
-                                    doc.Delete(f1.Id);
-                                Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
-                                           new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
-                                XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
-                                XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
-                                XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
-                                newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
-                                axisLine = secondLine;
-                                ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
-                                Element newElement = doc.GetElement(newConduit.Id);
-                                ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
-                                Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
-                                Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
-                                f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                                Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
-                            }
+                            isCatch = true;
+                            if (newConduit != null)
+                                doc.Delete(newConduit.Id);
+                            if (f1 != null)
+                                doc.Delete(f1.Id);
+                            Line verticalLine = Line.CreateBound(new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z),
+                                       new XYZ(ConnectorOne.Origin.X, ConnectorOne.Origin.Y, ConnectorTwo.Origin.Z) + secondLine.Direction.CrossProduct(XYZ.BasisZ).Multiply(10));
+                            XYZ IP = Utility.FindIntersection(SecondaryElements[i], verticalLine);
+                            XYZ thirdStartPoint = new XYZ(IP.X, IP.Y, ConnectorOne.Origin.Z);
+                            XYZ thirdEndPoind = new XYZ(IP.X, IP.Y, ConnectorTwo.Origin.Z);
+                            newConduit = Utility.CreateConduit(doc, PrimaryElements[i] as Conduit, thirdStartPoint, thirdEndPoind);
+                            axisLine = secondLine;
+                            ElementTransformUtils.RotateElement(doc, newConduit.Id, axisLine, -angle);
+                            Element newElement = doc.GetElement(newConduit.Id);
+                            ConnectorSet ThirdConnectors = Utility.GetConnectorSet(newElement);
+                            Utility.RetainParameters(PrimaryElements[i], SecondaryElements[i], uiApp);
+                            Utility.RetainParameters(PrimaryElements[i], newElement, uiApp);
+                            f1 = Utility.CreateElbowFittings(SecondaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
+                            Utility.CreateElbowFittings(PrimaryConnectors, ThirdConnectors, doc, uiApp, PrimaryElements[i], true);
                         }
                     }
-                    #endregion
                 }
             }
             catch (Exception ex)
