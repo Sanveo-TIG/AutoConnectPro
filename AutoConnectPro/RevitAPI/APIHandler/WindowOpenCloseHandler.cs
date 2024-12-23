@@ -587,8 +587,6 @@ namespace AutoConnectPro
                                             }
                                             trans.Commit();
                                         }
-
-                                        //GROUPING MULTI LAYER
                                         Dictionary<XYZ, Element> multiorderthePrimaryElements = new Dictionary<XYZ, Element>();
                                         Dictionary<XYZ, Element> multiordertheSecondaryElements = new Dictionary<XYZ, Element>();
                                         List<Element> GroupedPrimaryElement = new List<Element>();
@@ -618,7 +616,7 @@ namespace AutoConnectPro
                                             {
                                                 GroupedPrimaryElement.AddRange(pair.Value);
                                             }
-                                            //Grouping Logic
+                                            //Grouping Logic for Secondary Conduits 
                                             List<XYZ> xyzPS = multiordertheSecondaryElements.Select(x => x.Key).ToList();
                                             List<XYZ> roundOFF = new List<XYZ>();
                                             foreach (var xyz in xyzPS)
@@ -671,7 +669,6 @@ namespace AutoConnectPro
                                             do
                                             {
                                                 Dictionary<Line, Element> _dictlineelement = new Dictionary<Line, Element>();
-                                                List<Element> priReverseorNot = new List<Element>();
                                                 List<Element> highestElevation = sortedGroupPrimary.Values.FirstOrDefault();
                                                 List<Element> storedSecondaryElement = new List<Element>();
                                                 for (int i = 0; i < 1; i++)
@@ -699,31 +696,6 @@ namespace AutoConnectPro
                                                     Element distanceLineElement = _dictlineelement.Where(kvp => kvp.Key == distanceLine).Select(kvp => kvp.Value).FirstOrDefault();
                                                     List<Element> sec = dictSecondaryElementKick.Where(kvp => kvp.Value.Any(x => x == distanceLineElement))
                                                                                                 .Select(kvp => kvp.Value).FirstOrDefault();
-
-                                                    /*priReverseorNot = sortedGroupPrimary.Where(kvp => kvp.Value.Any(x => x == highestElevation.FirstOrDefault())).Select(kvp => kvp.Value).FirstOrDefault();
-                                                    List<Line> previousLine = new List<Line>();
-                                                    bool isReverseDone = false;
-                                                    for (int z = 0; z < sec.Count; z++)
-                                                    {
-                                                        ConnectorSet PrimaryConnectorsMulti = Utility.GetConnectorSet(priReverseorNot[z]);
-                                                        ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(sec[z]);
-                                                        Utility.GetClosestConnectors(PrimaryConnectorsMulti, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
-                                                        Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
-                                                        doc.Create.NewDetailCurve(doc.ActiveView, checkline);
-                                                        foreach (Line pl in previousLine)
-                                                        {
-                                                            if (Utility.GetIntersection(pl, checkline) != null)
-                                                            {
-                                                                priReverseorNot.Reverse();
-                                                                isReverseDone = true;
-                                                                break;
-                                                            }
-                                                        }
-                                                        if (isReverseDone)
-                                                            break;
-                                                        previousLine.Add(checkline);
-                                                    }*/
-
                                                     Dictionary<XYZ, Element> orderXYZ = new Dictionary<XYZ, Element>();
                                                     foreach (Element secele in sec)
                                                     {
@@ -755,6 +727,30 @@ namespace AutoConnectPro
                                                     }
                                                 }
                                                 List<Element> pri = sortedGroupPrimary.Where(kvp => kvp.Value.Any(x => x == highestElevation.FirstOrDefault())).Select(kvp => kvp.Value).FirstOrDefault();
+
+                                                /*List<Line> previousLine = new List<Line>();
+                                                bool isReverseDone = false;
+                                                for (int z = 0; z < sec.Count; z++)
+                                                {
+                                                    ConnectorSet PrimaryConnectorsMulti = Utility.GetConnectorSet(pri[z]);
+                                                    ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(sec[z]);
+                                                    Utility.GetClosestConnectors(PrimaryConnectorsMulti, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                                    Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
+                                                    doc.Create.NewDetailCurve(doc.ActiveView, checkline);
+                                                    foreach (Line pl in previousLine)
+                                                    {
+                                                        if (Utility.GetIntersection(pl, checkline) != null)
+                                                        {
+                                                            pri.Reverse();
+                                                            isReverseDone = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if (isReverseDone)
+                                                        break;
+                                                    previousLine.Add(checkline);
+                                                }*/
+
                                                 _firstKickGroup.AddRange(pri);
                                                 sortedGroupPrimary.Remove(sortedGroupPrimary.FirstOrDefault(kvp => kvp.Value == pri).Key);
                                                 if (sortedGroupPrimary.Count == 1)
@@ -764,7 +760,6 @@ namespace AutoConnectPro
                                                 }
                                             }
                                             while (sortedGroupPrimary.Count > 1 && sortedGroupPrimary.Count == dictSecondaryElementKick.Count);
-
                                             if (elementsList is Conduit && elementsList != null)
                                             {
                                                 XYZ xyz = ((elementsList.Location as LocationCurve).Curve as Line).Direction;
@@ -799,7 +794,7 @@ namespace AutoConnectPro
                                             {
                                                 GroupedPrimaryElement.AddRange(pair.Value);
                                             }
-                                            //Grouping Logic
+                                            //Order the Secondary Conduits
                                             List<XYZ> xyzPS = multiordertheSecondaryElements.Select(x => x.Key).ToList();
                                             List<XYZ> roundOFF = new List<XYZ>();
                                             foreach (var xyz in xyzPS)
@@ -847,7 +842,7 @@ namespace AutoConnectPro
                                                 }
                                                 while (multiordertheSecondaryElements.Count > 0);
                                             }
-
+                                            //Order the Primary Conduits 
                                             List<Line> previousLine = new List<Line>();
                                             bool isReverseDone = false;
                                             for (int z = 0; z < GroupedSecondaryElement.Count; z++)
