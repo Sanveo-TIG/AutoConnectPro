@@ -31,6 +31,8 @@ using Newtonsoft.Json.Linq;
 using System.Collections;
 using System.Windows.Input;
 using System.Security.Policy;
+using System.Security.Cryptography;
+using System.Windows.Media.TextFormatting;
 
 namespace AutoConnectPro
 {
@@ -74,6 +76,7 @@ namespace AutoConnectPro
         public UIDocument _uiDocument = null;
 
         public bool isStubCreate = true;
+        public static bool isSecondaryLayers = false;
 
         public void Execute(UIApplication uiApp)
         {
@@ -462,7 +465,6 @@ namespace AutoConnectPro
                                     Utility.GetClosestConnectors(FirstConnectors, SecondConnectors, out Connector ConnectorFirst, out Connector ConnectorSecond);
                                     Line line = Line.CreateBound(new XYZ(ConnectorFirst.Origin.X, ConnectorFirst.Origin.Y, 0),
                                                               new XYZ(ConnectorSecond.Origin.X, ConnectorSecond.Origin.Y, 0));
-                                    ///doc.Create.NewDetailCurve(doc.ActiveView, line as Curve);
                                     ordertheLineLength.Add(secEle, Math.Round(line.Length, 4));
                                 }
                                 List<KeyValuePair<Element, double>> orderedList = ordertheLineLength.OrderBy(kvp => kvp.Value).ToList();
@@ -679,7 +681,6 @@ namespace AutoConnectPro
                                                         ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(dec.Value.FirstOrDefault());
                                                         Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
                                                         Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
-                                                        //doc.Create.NewDetailCurve(doc.ActiveView, checkline);
                                                         _dictlineelement.Add(checkline, dec.Value.FirstOrDefault());
                                                     }
                                                     double secElevation = (((dictSecondaryElementKick.Values.FirstOrDefault().FirstOrDefault().Location as LocationCurve).Curve) as Line).Origin.Z;
@@ -851,7 +852,6 @@ namespace AutoConnectPro
                                                 ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(GroupedSecondaryElement[z]);
                                                 Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
                                                 Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
-                                                //doc.Create.NewDetailCurve(doc.ActiveView, checkline);
                                                 foreach (Line pl in previousLine)
                                                 {
                                                     if (Utility.GetIntersection(pl, checkline) != null)
@@ -1155,6 +1155,7 @@ namespace AutoConnectPro
                                                                     do
                                                                     {
                                                                         List<XYZ> xyzListPrimary = new List<XYZ>();
+                                                                        isSecondaryLayers = true;
                                                                         List<XYZ> xyzListSecondary = new List<XYZ>();
                                                                         xyzListSecondary.AddRange(multiordertheSecondaryElements.Select(x => x.Key));
                                                                         List<Element> Sele = FindCornerConduits(multiordertheSecondaryElements, xyzListSecondary, doc, isangledVerticalConduitsVHO, verticalLayerCount);
@@ -1380,12 +1381,24 @@ namespace AutoConnectPro
                 _dictReorder = new Dictionary<int, List<Element>>();
                 _dictReorderStub = new Dictionary<int, List<Element>>();
                 isStubCreate = true;
+                isSecondaryLayers = false;
 
                 _AscendingElementwithPositiveAngle = false;
                 _DescendingElementwithPositiveAngle = false;
                 _AscendingElementwithNegativeAngle = false;
                 _DescendingElementwithNegativeAngle = false;
             }
+        }
+        private static double CalculateDistanceFromPointToLine(Line line, XYZ point)
+        {
+            XYZ lineStart = line.GetEndPoint(0);
+            XYZ lineEnd = line.GetEndPoint(1);
+            XYZ lineVector = lineEnd - lineStart;
+            XYZ pointVector = point - lineStart;
+            double t = (pointVector.DotProduct(lineVector)) / (lineVector.DotProduct(lineVector));
+            t = Math.Max(0, Math.Min(1, t));
+            XYZ closestPointOnLine = lineStart + t * lineVector;
+            return closestPointOnLine.DistanceTo(point);
         }
         public static void GetClosestConnectorJoin(Conduit horizotalConduit, Conduit verticalConduit, out Connector connector1, out Connector connector2)
         {
@@ -1435,7 +1448,7 @@ namespace AutoConnectPro
                 }
             }
         }
-        public static List<Element> FindCornerConduits(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, bool isangledVerticalConduits, int verticalLayerCount)
+        public List<Element> FindCornerConduits(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, bool isangledVerticalConduits, int verticalLayerCount)
         {
             List<Element> GroupedElement = new List<Element>();
             using (SubTransaction trans = new SubTransaction(doc))
@@ -1521,8 +1534,6 @@ namespace AutoConnectPro
                 }
                 else
                 {
-                    //doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
-                    //new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0)));
                     PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
                  new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
                     linesWithLengths = new Dictionary<double, List<XYZ>> { { PCl1.Length, new List<XYZ>() { cornerPoints[0], cornerPoints[1] } } };
@@ -1535,8 +1546,10 @@ namespace AutoConnectPro
                                                  .ToList();
                 if (isangledVerticalConduits)
                 {
+                    #region CENTER CONDUIT CREATE TO FIND INTERSECT ANY OTHER CONDUITS 
+                    List<Element> conduitsBetween = new List<Element>();
                     XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
-                ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                      ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
                     XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
                        ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
                     List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
@@ -1548,9 +1561,47 @@ namespace AutoConnectPro
                     XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
                     Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
                     otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
-                    Element midPointConduit = null;
                     List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
-                    List<Element> conduitsBetween = new List<Element>();
+                    double largestDiameter = collector.Max(conduit =>
+                    {
+                        Parameter diameterParam = conduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
+                        return diameterParam?.AsDouble() ?? 0;
+                    });
+                    Parameter newDiameterParam = otherConduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
+                    if (newDiameterParam != null && newDiameterParam.IsReadOnly == false)
+                    {
+                        newDiameterParam.Set(largestDiameter);
+                    }
+                    #endregion
+                    #region SOLID INTERSECTION METHOD
+                    Options opt = new Options();
+                    GeometryElement GE = otherConduit.get_Geometry(opt);
+                    foreach (GeometryObject GO in GE)
+                    {
+                        if (GO is Solid)
+                        {
+                            Solid solid = (Solid)GO;
+                            ElementIntersectsSolidFilter filter = new ElementIntersectsSolidFilter(solid);
+                            List<Conduit> ConduitsIntersecting = new FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(typeof(Conduit))
+                                .WherePasses(filter).Cast<Conduit>().ToList();
+                            foreach (Conduit con in ConduitsIntersecting)
+                            {
+                                if (con.Id != matchingElements[0].Id)
+                                {
+                                    foreach (KeyValuePair<XYZ, Element> PS in multilayerdPS)
+                                    {
+                                        if ((PS.Value as Conduit).Id == con.Id)
+                                        {
+                                            GroupedElement.Add(PS.Value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    GroupedElement = ArrangeConduits(doc, matchingElements[0] as Conduit, GroupedElement);
+                    #endregion
+                    /*#region CURVE INTERSECTION METHOD
                     conduitsBetween.Add(matchingElements[0]);
                     foreach (Element conduit in collector)
                     {
@@ -1560,26 +1611,19 @@ namespace AutoConnectPro
                         LocationCurve otherConduitCurve = otherConduit.Location as LocationCurve;
                         if (conduit.Id != matchingElements[0].Id && conduit.Id != matchingElements[1].Id)
                         {
-                            SetComparisonResult result = conduitCurve.Curve.Intersect(otherConduitCurve.Curve, out IntersectionResultArray intersectionResultArray);
-                            if (result == SetComparisonResult.Overlap)
+                            XYZ IP = Utility.GetIntersection(conduitCurve.Curve as Line, otherConduitCurve.Curve as Line);
+                            if (IP != null)
                             {
                                 if (!conduitsBetween.Contains(otherConduit))
                                 {
                                     conduitsBetween.Add(conduit);
-                                }
-                                if (midPointConduit == null || midPointConduit.Id != conduit.Id)
-                                {
-                                    midPointConduit = conduit;
                                 }
                             }
                         }
                     }
                     conduitsBetween.Add(matchingElements[1]);
                     GroupedElement = conduitsBetween;
-                    if (otherConduit != null)
-                    {
-                        doc.Delete(otherConduit.Id);
-                    }
+                    #endregion*/
                 }
                 else
                 {
@@ -1590,9 +1634,66 @@ namespace AutoConnectPro
                                                   .ToList();
                     _previousXYZ = cornerPoints[0];
                 }
+                if (otherConduit != null)
+                {
+                    doc.Delete(otherConduit.Id);
+                }
                 trans.Commit();
             }
             return GroupedElement;
+        }
+        public List<Element> ArrangeConduits(Document doc, Conduit singleConduit, List<Element> groupConduits)
+        {
+            List<Element> sortedConduits = new List<Element>();
+            sortedConduits.Add(singleConduit);
+            if (singleConduit == null || groupConduits == null)
+            {
+                throw new ArgumentException("A valid single conduit and exactly three group conduits are required.");
+            }
+            XYZ singleConduitOrigin = Utility.GetXYvalue(Utility.GetLineFromConduit(singleConduit).Origin);
+            Dictionary<Element, double> conduitDistances = new Dictionary<Element, double>();
+            foreach (Conduit conduit in groupConduits)
+            {
+                XYZ groupConduitOrigin = Utility.GetXYvalue(Utility.GetLineFromConduit(conduit).Origin);
+                double distance = singleConduitOrigin.DistanceTo(groupConduitOrigin);
+                conduitDistances[conduit] = distance;
+            }
+            sortedConduits.AddRange(conduitDistances.OrderBy(kvp => kvp.Value).Select(kvp => kvp.Key).ToList());
+            return sortedConduits;
+        }
+        public BoundingBoxXYZ CreateSingleConduitBoundingBox(Document doc, Element bbEle, XYZ direction, Line connectedLine)
+        {
+            double dia = bbEle.get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+            Line firstLine = Utility.GetLineFromConduit(bbEle);
+            XYZ firstStartPoint = Utility.GetXYvalue(firstLine.GetEndPoint(0));
+            XYZ firstEndPoint = Utility.GetXYvalue(firstLine.GetEndPoint(1));
+            XYZ sideXYZ1 = firstStartPoint - direction * (dia / 2);
+            XYZ sideXYZ2 = firstEndPoint + direction * (dia / 2);
+            Line leftLine = Utility.CrossProductLine(connectedLine, sideXYZ1, (dia / 2));
+            Line rightLine = Utility.CrossProductLine(connectedLine, sideXYZ2, (dia / 2));
+            Line upperLine = Line.CreateBound(leftLine.GetEndPoint(0), rightLine.GetEndPoint(0));
+            Line lowerLine = Line.CreateBound(leftLine.GetEndPoint(1), rightLine.GetEndPoint(1));
+            /*doc.Create.NewDetailCurve(doc.ActiveView, leftLine);
+            doc.Create.NewDetailCurve(doc.ActiveView, rightLine);
+            doc.Create.NewDetailCurve(doc.ActiveView, upperLine);
+            doc.Create.NewDetailCurve(doc.ActiveView, lowerLine);*/
+            List<XYZ> boundingBoxXYZs = new List<XYZ>() { leftLine.GetEndPoint(0),leftLine.GetEndPoint(1),
+                                                            rightLine.GetEndPoint(0),rightLine.GetEndPoint(1)};
+            BoundingBoxXYZ elebbox = new BoundingBoxXYZ
+            {
+                Min = new XYZ(boundingBoxXYZs.Min(p => p.X), boundingBoxXYZs.Min(p => p.Y), boundingBoxXYZs.Min(p => p.Z)),
+                Max = new XYZ(boundingBoxXYZs.Max(p => p.X), boundingBoxXYZs.Max(p => p.Y), boundingBoxXYZs.Max(p => p.Z))
+            };
+            return elebbox;
+        }
+        private bool IsBoundingBoxInside(BoundingBoxXYZ outerBox, BoundingBoxXYZ innerBox)
+        {
+            XYZ outerMin = outerBox.Min;
+            XYZ outerMax = outerBox.Max;
+            XYZ innerMin = innerBox.Min;
+            XYZ innerMax = innerBox.Max;
+            return innerMin.X >= outerMin.X && innerMax.X <= outerMax.X &&
+                   innerMin.Y >= outerMin.Y && innerMax.Y <= outerMax.Y;
         }
         private static bool HasDuplicateYCoordinates(List<XYZ> points)
         {
@@ -1641,15 +1742,12 @@ namespace AutoConnectPro
             Dictionary<XYZ, Element> multilayerdPS, Document doc)
         {
             List<XYZ> orderedPoints = new List<XYZ>();
-
             XYZ midPoint1 = (((twoConduits[0].Location as LocationCurve).Curve).GetEndPoint(0) +
                ((twoConduits[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
             XYZ midPoint2 = (((twoConduits[1].Location as LocationCurve).Curve).GetEndPoint(0) +
                ((twoConduits[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
             midPoint2 = new XYZ(midPoint2.X, midPoint2.Y, midPoint1.Z);
             List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
-
-
             double outsideDiameter1 = twoConduits[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
             double outsideDiameter2 = twoConduits[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
             List<XYZ> oldXYZ = ConduitconnectedLine.Select(x => x.Value).ToList().FirstOrDefault();
@@ -1664,7 +1762,6 @@ namespace AutoConnectPro
             SketchPlane sketchPlane = SketchPlane.Create(doc, plane);
             Line leftLine = Utility.CrossProductLine(connectedLine, newXYZ1, (outsideDiameter1 / 2));
             Line rightLine = Utility.CrossProductLine(connectedLine, newXYZ2, (outsideDiameter1 / 2));
-
             normal = leftLine.Direction.CrossProduct(XYZ.BasisZ);
             origin = leftLine.GetEndPoint(0);
             plane = Plane.CreateByNormalAndOrigin(normal, origin);
@@ -1693,6 +1790,54 @@ namespace AutoConnectPro
             orderedPoints = CollectBetweenElementByNewBoundingBox(bbox.Min, bbox.Max, twoConduits, multilayerdPS, doc);
             return orderedPoints;
         }
+        public static List<XYZ> CreateBoundingBoxLineZValue0(Dictionary<double, List<XYZ>> ConduitconnectedLine, List<Element> twoConduits,
+            Dictionary<XYZ, Element> multilayerdPS, Document doc)
+        {
+            List<XYZ> orderedPoints = new List<XYZ>();
+            XYZ midPoint1 = (((twoConduits[0].Location as LocationCurve).Curve).GetEndPoint(0) +
+               ((twoConduits[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+            XYZ midPoint2 = (((twoConduits[1].Location as LocationCurve).Curve).GetEndPoint(0) +
+               ((twoConduits[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+            midPoint2 = new XYZ(midPoint2.X, midPoint2.Y, midPoint1.Z);
+            List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
+            double outsideDiameter1 = twoConduits[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+            double outsideDiameter2 = twoConduits[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+            Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
+            XYZ direction = connectedLine.Direction;
+            XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
+            XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
+            Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
+            Line leftLine = Utility.CrossProductLine(connectedLine, newXYZ1, (outsideDiameter1 / 2));
+            Line rightLine = Utility.CrossProductLine(connectedLine, newXYZ2, (outsideDiameter1 / 2));
+            List<XYZ> newXYZs = new List<XYZ>() { leftLine.GetEndPoint(0),leftLine.GetEndPoint(1),
+            rightLine.GetEndPoint(0),rightLine.GetEndPoint(1)};
+            Line upperLine = Line.CreateBound(leftLine.GetEndPoint(0), rightLine.GetEndPoint(0));
+            Line lowerLine = Line.CreateBound(leftLine.GetEndPoint(1), rightLine.GetEndPoint(1));
+            BoundingBoxXYZ bbox = new BoundingBoxXYZ
+            {
+                Min = new XYZ(newXYZs.Min(p => p.X), newXYZs.Min(p => p.Y), 0),
+                Max = new XYZ(newXYZs.Max(p => p.X), newXYZs.Max(p => p.Y), 0)
+            };
+            Curve curve = doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound((leftLine.GetEndPoint(0)),
+                (leftLine.GetEndPoint(1)))).GeometryCurve;
+            SketchPlane sketchPlane = SketchPlane.Create(doc, Plane.CreateByNormalAndOrigin(doc.ActiveView.ViewDirection, doc.ActiveView.Origin));
+            ModelCurve modelCurve = doc.Create.NewModelCurve(curve, sketchPlane);
+            curve = doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound((rightLine.GetEndPoint(0)),
+               (rightLine.GetEndPoint(1)))).GeometryCurve;
+            sketchPlane = SketchPlane.Create(doc, Plane.CreateByNormalAndOrigin(doc.ActiveView.ViewDirection, doc.ActiveView.Origin));
+            modelCurve = doc.Create.NewModelCurve(curve, sketchPlane);
+            curve = doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound((upperLine.GetEndPoint(0)),
+                (upperLine.GetEndPoint(1)))).GeometryCurve;
+            sketchPlane = SketchPlane.Create(doc, Plane.CreateByNormalAndOrigin(doc.ActiveView.ViewDirection, doc.ActiveView.Origin));
+            modelCurve = doc.Create.NewModelCurve(curve, sketchPlane);
+            curve = doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound((lowerLine.GetEndPoint(0)),
+                (lowerLine.GetEndPoint(1)))).GeometryCurve;
+            sketchPlane = SketchPlane.Create(doc, Plane.CreateByNormalAndOrigin(doc.ActiveView.ViewDirection, doc.ActiveView.Origin));
+            modelCurve = doc.Create.NewModelCurve(curve, sketchPlane);
+
+            orderedPoints = CollectBetweenElementByNewBoundingBox(bbox.Min, bbox.Max, twoConduits, multilayerdPS, doc);
+            return orderedPoints;
+        }
         private static List<XYZ> CollectBetweenElementByNewBoundingBox(XYZ minXYZ, XYZ maxXYZ, List<Element> matchingElements, Dictionary<XYZ,
             Element> multilayerdPS, Document doc)
         {
@@ -1714,7 +1859,7 @@ namespace AutoConnectPro
                     {
                         conduitsBetween.Add(conduit);
                     }
-                    else if (IntersectingElements.Any(x => x.Id.IntegerValue == conduit.Id.IntegerValue))
+                    else if (IntersectingElements.Any(x => x.Id == conduit.Id))
                     {
                         conduitsBetween.Add(conduit);
                     }
@@ -2274,7 +2419,6 @@ namespace AutoConnectPro
                         {
                             DUPlengthElementDict.Add(length, ele);
                         }
-                        //doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound(Utility.GetXYvalue(c1a.Origin), Utility.GetXYvalue(c2a.Origin)));
                     }
                     sortedLengthElementDict = lengthElementDict.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                     DUPsortedLengthElementDict = DUPlengthElementDict.OrderByDescending(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
