@@ -76,7 +76,6 @@ namespace AutoConnectPro
         public UIDocument _uiDocument = null;
 
         public bool isStubCreate = true;
-        public static bool isSecondaryLayers = false;
 
         public void Execute(UIApplication uiApp)
         {
@@ -473,6 +472,28 @@ namespace AutoConnectPro
                                     dictSecondElementDUP.Add(kvpEle.Key);
                                 }
                                 dictFirstElementDUP = dictFirstElement;
+                                //Order the Primary Conduits 
+                                List<Line> previousLine = new List<Line>();
+                                bool isReverseDone = false;
+                                for (int z = 0; z < dictSecondElementDUP.Count; z++)
+                                {
+                                    ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(dictFirstElementDUP[z]);
+                                    ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(dictSecondElementDUP[z]);
+                                    Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                    Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
+                                    foreach (Line pl in previousLine)
+                                    {
+                                        if (Utility.GetIntersection(pl, checkline) != null)
+                                        {
+                                            dictFirstElementDUP.Reverse();
+                                            isReverseDone = true;
+                                            break;
+                                        }
+                                    }
+                                    if (isReverseDone)
+                                        break;
+                                    previousLine.Add(checkline);
+                                }
                             }
                             transOrder.Commit();
                         }
@@ -1061,7 +1082,6 @@ namespace AutoConnectPro
                                                         //Grouping Logic
                                                         List<Element> GroupedPrimaryElement = new List<Element>();
                                                         List<Element> GroupedSecondaryElement = new List<Element>();
-                                                        bool isangledVerticalConduitsVHO = false;
 
                                                         if (multiorderthePrimaryElements.Count > 1 && multiordertheSecondaryElements.Count > 1)
                                                         {
@@ -1077,103 +1097,95 @@ namespace AutoConnectPro
                                                                     roundOFF.Add(roundedXYZ);
                                                                 }
                                                                 bool hasDuplicateY = HasDuplicateYCoordinates(roundOFF);
-                                                                if (hasDuplicateY)
+                                                                int s = 0;
+                                                                int verticalLayerCount = 0;
+                                                                _previousXYZ = null;
+                                                                int d = 0;
+                                                                Dictionary<int, List<Element>> reversePriElements = new Dictionary<int, List<Element>>();
+                                                                List<Element> previousListofElement = new List<Element>();
+                                                                do
                                                                 {
-                                                                    int s = 0;
-                                                                    int verticalLayerCount = 0;
-                                                                    _previousXYZ = null;
-                                                                    do
+                                                                    List<XYZ> xyzListPrimary = new List<XYZ>();
+                                                                    List<XYZ> xyzListSecondary = new List<XYZ>();
+                                                                    xyzListPrimary.AddRange(multiorderthePrimaryElements.Select(x => x.Key));
+                                                                    List<Element> Pele = FindCornerConduitsInclinedVerticalConduits(multiorderthePrimaryElements, xyzListPrimary, doc, verticalLayerCount, previousListofElement);
+                                                                    previousListofElement = (Pele);
+                                                                    reversePriElements.Add(d, Pele);
+                                                                    d++;
+                                                                    GroupedPrimaryElement.AddRange(Pele);
+                                                                    if (s == 0)
                                                                     {
-                                                                        List<XYZ> xyzListPrimary = new List<XYZ>();
-                                                                        List<XYZ> xyzListSecondary = new List<XYZ>();
-                                                                        xyzListPrimary.AddRange(multiorderthePrimaryElements.Select(x => x.Key));
-                                                                        List<Element> Pele = FindCornerConduits(multiorderthePrimaryElements, xyzListPrimary, doc, isangledVerticalConduitsVHO, verticalLayerCount);
-                                                                        GroupedPrimaryElement.AddRange(Pele);
-                                                                        if (s == 0)
-                                                                        {
-                                                                            verticalLayerCount = GroupedPrimaryElement.Count;
-                                                                        }
-                                                                        s++;
-                                                                        multiorderthePrimaryElements = multiorderthePrimaryElements.Where(kvp => !GroupedPrimaryElement.Any(e => e.Id == kvp.Value.Id))
-                                                                                                           .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                                        multiorderthePrimaryElements = multiorderthePrimaryElements.OrderBy(kvp => kvp.Key, new XYZComparer()).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                                        if (multiorderthePrimaryElements.Count == 1)
-                                                                        {
-                                                                            GroupedPrimaryElement.Add(multiorderthePrimaryElements.FirstOrDefault().Value);
-                                                                            multiorderthePrimaryElements.Clear();
-                                                                        }
+                                                                        verticalLayerCount = GroupedPrimaryElement.Count;
                                                                     }
-                                                                    while (multiorderthePrimaryElements.Count > 0);
-                                                                    _previousXYZ = null;
-                                                                    do
-                                                                    {
-                                                                        List<XYZ> xyzListPrimary = new List<XYZ>();
-                                                                        List<XYZ> xyzListSecondary = new List<XYZ>();
-                                                                        xyzListSecondary.AddRange(multiordertheSecondaryElements.Select(x => x.Key));
-                                                                        List<Element> Sele = FindCornerConduits(multiordertheSecondaryElements, xyzListSecondary, doc, isangledVerticalConduitsVHO, verticalLayerCount);
-                                                                        GroupedSecondaryElement.AddRange(Sele);
-                                                                        multiordertheSecondaryElements = multiordertheSecondaryElements.Where(kvp => !GroupedSecondaryElement.Any(e => e.Id == kvp.Value.Id))
+                                                                    s++;
+                                                                    multiorderthePrimaryElements = multiorderthePrimaryElements.Where(kvp => !GroupedPrimaryElement.Any(e => e.Id == kvp.Value.Id))
                                                                                                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                                        multiordertheSecondaryElements = multiordertheSecondaryElements.OrderBy(kvp => kvp.Key, new XYZComparer()).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                                        if (multiordertheSecondaryElements.Count == 1)
-                                                                        {
-                                                                            GroupedSecondaryElement.Add(multiordertheSecondaryElements.FirstOrDefault().Value);
-                                                                            multiordertheSecondaryElements.Clear();
-                                                                        }
+                                                                    multiorderthePrimaryElements = multiorderthePrimaryElements.OrderBy(kvp => kvp.Key, new XYZComparer()).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                                    if (multiorderthePrimaryElements.Count == 1)
+                                                                    {
+                                                                        GroupedPrimaryElement.Add(multiorderthePrimaryElements.FirstOrDefault().Value);
+                                                                        reversePriElements.Add(d, multiorderthePrimaryElements.Values.ToList());
+                                                                        multiorderthePrimaryElements.Clear();
                                                                     }
-                                                                    while (multiordertheSecondaryElements.Count > 0);
                                                                 }
-                                                                else
+                                                                while (multiorderthePrimaryElements.Count > 0);
+                                                                _previousXYZ = null;
+                                                                previousListofElement = new List<Element>();
+                                                                int c = 0;
+                                                                Dictionary<int, List<Element>> reverseSecElements = new Dictionary<int, List<Element>>();
+                                                                do
                                                                 {
-                                                                    isangledVerticalConduitsVHO = true;
-                                                                    int s = 0;
-                                                                    int verticalLayerCount = 0;
-                                                                    _previousXYZ = null;
-                                                                    do
+                                                                    List<XYZ> xyzListPrimary = new List<XYZ>();
+                                                                    List<XYZ> xyzListSecondary = new List<XYZ>();
+                                                                    xyzListSecondary.AddRange(multiordertheSecondaryElements.Select(x => x.Key));
+                                                                    List<Element> Sele = FindCornerConduitsInclinedVerticalConduits(multiordertheSecondaryElements, xyzListSecondary, doc, verticalLayerCount, previousListofElement);
+                                                                    reverseSecElements.Add(c, Sele);
+                                                                    c++;
+                                                                    previousListofElement = (Sele);
+                                                                    GroupedSecondaryElement.AddRange(Sele);
+                                                                    multiordertheSecondaryElements = multiordertheSecondaryElements.Where(kvp => !GroupedSecondaryElement.Any(e => e.Id == kvp.Value.Id))
+                                                                                                   .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                                    multiordertheSecondaryElements = multiordertheSecondaryElements.OrderBy(kvp => kvp.Key, new XYZComparer()).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                                                                    if (multiordertheSecondaryElements.Count == 1)
                                                                     {
-                                                                        List<XYZ> xyzListPrimary = new List<XYZ>();
-                                                                        List<XYZ> xyzListSecondary = new List<XYZ>();
-                                                                        xyzListPrimary.AddRange(multiorderthePrimaryElements.Select(x => x.Key));
-                                                                        List<Element> Pele = FindCornerConduits(multiorderthePrimaryElements, xyzListPrimary, doc, isangledVerticalConduitsVHO, verticalLayerCount);
-                                                                        GroupedPrimaryElement.AddRange(Pele);
-                                                                        if (s == 0)
-                                                                        {
-                                                                            verticalLayerCount = GroupedPrimaryElement.Count;
-                                                                        }
-                                                                        s++;
-                                                                        multiorderthePrimaryElements = multiorderthePrimaryElements.Where(kvp => !GroupedPrimaryElement.Any(e => e.Id == kvp.Value.Id))
-                                                                                                           .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                                        multiorderthePrimaryElements = multiorderthePrimaryElements.OrderBy(kvp => kvp.Key, new XYZComparer()).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                                        if (multiorderthePrimaryElements.Count == 1)
-                                                                        {
-                                                                            GroupedPrimaryElement.Add(multiorderthePrimaryElements.FirstOrDefault().Value);
-                                                                            multiorderthePrimaryElements.Clear();
-                                                                        }
+                                                                        GroupedSecondaryElement.Add(multiordertheSecondaryElements.FirstOrDefault().Value);
+                                                                        reverseSecElements.Add(c, multiordertheSecondaryElements.Values.ToList());
+                                                                        multiordertheSecondaryElements.Clear();
                                                                     }
-                                                                    while (multiorderthePrimaryElements.Count > 0);
-                                                                    _previousXYZ = null;
-                                                                    do
+                                                                }
+                                                                while (multiordertheSecondaryElements.Count > 0);
+                                                                if (reverseSecElements.Count == 2 && reversePriElements.Count == 2)
+                                                                {
+                                                                    bool isReverse = false;
+                                                                    List<Line> previousLines = new List<Line>();
+                                                                    for (int b = 0; b < reverseSecElements.Values.Count; b++)
                                                                     {
-                                                                        List<XYZ> xyzListPrimary = new List<XYZ>();
-                                                                        isSecondaryLayers = true;
-                                                                        List<XYZ> xyzListSecondary = new List<XYZ>();
-                                                                        xyzListSecondary.AddRange(multiordertheSecondaryElements.Select(x => x.Key));
-                                                                        List<Element> Sele = FindCornerConduits(multiordertheSecondaryElements, xyzListSecondary, doc, isangledVerticalConduitsVHO, verticalLayerCount);
-                                                                        GroupedSecondaryElement.AddRange(Sele);
-                                                                        multiordertheSecondaryElements = multiordertheSecondaryElements.Where(kvp => !GroupedSecondaryElement.Any(e => e.Id == kvp.Value.Id))
-                                                                                                       .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                                        multiordertheSecondaryElements = multiordertheSecondaryElements.OrderBy(kvp => kvp.Key, new XYZComparer()).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                                                                        if (multiordertheSecondaryElements.Count == 1)
+                                                                        Element priEle = reversePriElements[b].Cast<Element>().ToList().FirstOrDefault();
+                                                                        Element secEle = reverseSecElements[b].Cast<Element>().ToList().FirstOrDefault();
+                                                                        XYZ priOriginXYZ = Utility.GetXYvalue(Utility.GetLineFromConduit(priEle).Origin);
+                                                                        XYZ secOriginXYZ = Utility.GetXYvalue(Utility.GetLineFromConduit(secEle).Origin);
+                                                                        Line prisecLine = Line.CreateBound(priOriginXYZ, secOriginXYZ);
+                                                                        foreach (Line pl in previousLines)
                                                                         {
-                                                                            GroupedSecondaryElement.Add(multiordertheSecondaryElements.FirstOrDefault().Value);
-                                                                            multiordertheSecondaryElements.Clear();
+                                                                            if (Utility.GetIntersection(pl, prisecLine) != null)
+                                                                            {
+                                                                                GroupedSecondaryElement = new List<Element>();
+                                                                                reverseSecElements = reverseSecElements.OrderByDescending(kvp => kvp.Key).ToDictionary(x => x.Key, x => x.Value);
+                                                                                foreach (KeyValuePair<int, List<Element>> kvp in reverseSecElements)
+                                                                                {
+                                                                                    GroupedSecondaryElement.AddRange(kvp.Value);
+                                                                                }
+                                                                                isReverse = true;
+                                                                                break;
+                                                                            }
                                                                         }
+                                                                        if (isReverse)
+                                                                            break;
+                                                                        previousLines.Add(prisecLine);
                                                                     }
-                                                                    while (multiordertheSecondaryElements.Count > 0);
                                                                 }
                                                                 trans.Commit();
                                                             }
-
                                                             HoffsetExecute(_uiapp, ref GroupedPrimaryElement, ref GroupedSecondaryElement);
                                                             isOffsetTool = true;
                                                             isoffsetwindowClose = true;
@@ -1381,7 +1393,6 @@ namespace AutoConnectPro
                 _dictReorder = new Dictionary<int, List<Element>>();
                 _dictReorderStub = new Dictionary<int, List<Element>>();
                 isStubCreate = true;
-                isSecondaryLayers = false;
 
                 _AscendingElementwithPositiveAngle = false;
                 _DescendingElementwithPositiveAngle = false;
@@ -1448,7 +1459,7 @@ namespace AutoConnectPro
                 }
             }
         }
-        public List<Element> FindCornerConduits(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, bool isangledVerticalConduits, int verticalLayerCount)
+        public List<Element> FindCornerConduits(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, int verticalLayerCount)
         {
             List<Element> GroupedElement = new List<Element>();
             using (SubTransaction trans = new SubTransaction(doc))
@@ -1544,96 +1555,226 @@ namespace AutoConnectPro
                                                  .Where(kvp => XYZPoints.Contains(kvp.Key))
                                                  .Select(kvp => kvp.Value)
                                                  .ToList();
-                if (isangledVerticalConduits)
+
+                List<XYZ> orderedPoints = CreateBoundingBoxLine(linesWithLengths, matchingElements, multilayerdPS, doc);
+                GroupedElement = multilayerdPS
+                                              .Where(kvp => orderedPoints.Contains(kvp.Key))
+                                              .Select(kvp => kvp.Value)
+                                              .ToList();
+                _previousXYZ = cornerPoints[0];
+
+                if (otherConduit != null)
                 {
-                    #region CENTER CONDUIT CREATE TO FIND INTERSECT ANY OTHER CONDUITS 
-                    List<Element> conduitsBetween = new List<Element>();
-                    XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
-                      ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
-                    XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
-                       ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
-                    List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
-                    double outsideDiameter1 = matchingElements[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
-                    double outsideDiameter2 = matchingElements[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
-                    Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
-                    XYZ direction = connectedLine.Direction;
-                    XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
-                    XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
-                    Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
-                    otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
-                    List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
-                    double largestDiameter = collector.Max(conduit =>
+                    doc.Delete(otherConduit.Id);
+                }
+                trans.Commit();
+            }
+            return GroupedElement;
+        }
+        public List<Element> FindCornerConduitsInclinedVerticalConduits(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, int verticalLayerCount, List<Element> previousListofElement)
+        {
+            List<Element> GroupedElement = new List<Element>();
+            using (SubTransaction trans = new SubTransaction(doc))
+            {
+                trans.Start();
+                double maxDistance = 0;
+                XYZ firstCorner = null;
+                XYZ secondCorner = null;
+                for (int a = 0; a < xyzPS.Count; a++)
+                {
+                    for (int j = a + 1; j < xyzPS.Count; j++)
                     {
-                        Parameter diameterParam = conduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
-                        return diameterParam?.AsDouble() ?? 0;
-                    });
-                    Parameter newDiameterParam = otherConduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
-                    if (newDiameterParam != null && newDiameterParam.IsReadOnly == false)
-                    {
-                        newDiameterParam.Set(largestDiameter);
-                    }
-                    #endregion
-                    #region SOLID INTERSECTION METHOD
-                    Options opt = new Options();
-                    GeometryElement GE = otherConduit.get_Geometry(opt);
-                    foreach (GeometryObject GO in GE)
-                    {
-                        if (GO is Solid)
+                        double distance = xyzPS[a].DistanceTo(xyzPS[j]);
+                        if (distance > maxDistance)
                         {
-                            Solid solid = (Solid)GO;
-                            ElementIntersectsSolidFilter filter = new ElementIntersectsSolidFilter(solid);
-                            List<Conduit> ConduitsIntersecting = new FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(typeof(Conduit))
-                                .WherePasses(filter).Cast<Conduit>().ToList();
-                            foreach (Conduit con in ConduitsIntersecting)
+                            maxDistance = distance;
+                            firstCorner = xyzPS[a];
+                            secondCorner = xyzPS[j];
+                        }
+                    }
+                }
+                List<XYZ> remainingPoints = xyzPS.Where(p => p != firstCorner && p != secondCorner).ToList();
+                List<XYZ> otherCorners = remainingPoints.OrderByDescending(p => DistanceToLine(firstCorner, secondCorner, p)).Take(2).ToList();
+                List<XYZ> cornerPoints = new List<XYZ> { firstCorner, secondCorner };
+                Line PCl1 = null;
+                Line PCl2 = null;
+                Line PCl3 = null;
+                Dictionary<double, List<XYZ>> linesWithLengths = new Dictionary<double, List<XYZ>>();
+
+                if (otherCorners.Count >= 2 && (Math.Round(cornerPoints[0].Y, 5) != Math.Round(cornerPoints[1].Y, 5)))
+                {
+                    if (verticalLayerCount != multilayerdPS.Count)
+                    {
+                        cornerPoints.AddRange(otherCorners);
+
+                        //Change the corner as it near by previous list of element
+                        Dictionary<Element, XYZ> cornerwithElement = new Dictionary<Element, XYZ>();
+                        foreach (XYZ xyz in cornerPoints)
+                        {
+                            Element elecor = multilayerdPS
+                                                .Where(kvp => xyz == (kvp.Key))
+                                                .Select(kvp => kvp.Value).FirstOrDefault();
+                            cornerwithElement.Add(elecor, xyz);
+                        }
+                        if (previousListofElement.Count > 0)
+                        {
+                            List<Element> cornerElements = multilayerdPS
+                                                     .Where(kvp => cornerPoints.Contains(kvp.Key))
+                                                     .Select(kvp => kvp.Value)
+                                                     .ToList();
+                            Dictionary<double, XYZ> orderCornerLength = new Dictionary<double, XYZ>();
+                            foreach (KeyValuePair<Element, XYZ> kvp in cornerwithElement)
                             {
-                                if (con.Id != matchingElements[0].Id)
+                                XYZ cornerOrigin = Utility.GetLineFromConduit(kvp.Key).Origin;
+                                XYZ previousOrigin = Utility.GetLineFromConduit(previousListofElement[0]).Origin;
+                                Line checkline = Line.CreateBound(Utility.GetXYvalue(cornerOrigin), Utility.GetXYvalue(previousOrigin));
+                                //doc.Create.NewDetailCurve(doc.ActiveView, checkline);
+                                orderCornerLength.Add(checkline.Length, kvp.Value);
+                            }
+                            orderCornerLength = orderCornerLength.OrderBy(x => x.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                            cornerPoints = orderCornerLength.Values.ToList();
+                        }
+
+
+                        List<XYZ> cornerPointsBackup = cornerPoints;
+                        double commonZ = xyzPS[0].Z;
+                        double minX = xyzPS.Min(p => p.X);
+                        double minY = xyzPS.Min(p => p.Y);
+                        double maxX = xyzPS.Max(p => p.X);
+                        double maxY = xyzPS.Max(p => p.Y);
+                        XYZ topLeft = new XYZ(minX, maxY, commonZ);      // (minX, maxY)
+                        XYZ topRight = new XYZ(maxX, maxY, commonZ);     // (maxX, maxY)
+                        XYZ bottomLeft = new XYZ(minX, minY, commonZ);   // (minX, minY)
+                        XYZ bottomRight = new XYZ(maxX, minY, commonZ);  // (maxX, minY)
+                        List<XYZ> _cornerPoints = new List<XYZ> { topLeft, topRight, bottomLeft, bottomRight };
+
+                        if (_previousXYZ != null)
+                        {
+                            XYZ[] cp = cornerPoints.ToArray();
+                            XYZ minDistanceCorner = FindMinimumDistance(_previousXYZ, cp);
+                            cornerPoints = new List<XYZ> { minDistanceCorner };
+                            cornerPoints.AddRange(cornerPointsBackup.Except(cornerPoints));
+                        }
+                        /*doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                        new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0)));
+                        doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                        new XYZ(cornerPoints[2].X, cornerPoints[2].Y, 0)));
+                        doc.Create.NewDetailCurve(doc.ActiveView, Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                        new XYZ(cornerPoints[3].X, cornerPoints[3].Y, 0)));*/
+                        PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                     new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
+                        PCl2 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                         new XYZ(cornerPoints[2].X, cornerPoints[2].Y, 0));
+                        PCl3 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                         new XYZ(cornerPoints[3].X, cornerPoints[3].Y, 0));
+                        linesWithLengths = new Dictionary<double, List<XYZ>>
+                                                       {
+                                                           {PCl1.Length,new List< XYZ>() {cornerPoints[0], cornerPoints[1] } },
+                                                           {PCl2.Length,new List< XYZ>() { cornerPoints[0], cornerPoints[2] }  },
+                                                           {PCl3.Length,new List< XYZ>() { cornerPoints[0], cornerPoints[3] }  }
+                                                       };
+                        linesWithLengths = linesWithLengths.OrderBy(x => x.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        linesWithLengths.Remove(linesWithLengths.Keys.FirstOrDefault());
+                        linesWithLengths.Remove(linesWithLengths.Keys.LastOrDefault());
+                    }
+                    else
+                    {
+                        PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
+                        linesWithLengths = new Dictionary<double, List<XYZ>> { { PCl1.Length, new List<XYZ>() { cornerPoints[0], cornerPoints[1] } } };
+                    }
+                }
+                else
+                {
+                    PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                 new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
+                    linesWithLengths = new Dictionary<double, List<XYZ>> { { PCl1.Length, new List<XYZ>() { cornerPoints[0], cornerPoints[1] } } };
+                }
+
+                List<XYZ> XYZPoints = linesWithLengths.Select(x => x.Value).ToList().FirstOrDefault();
+                List<Element> matchingElements = multilayerdPS
+                                                 .Where(kvp => XYZPoints.Contains(kvp.Key))
+                                                 .Select(kvp => kvp.Value)
+                                                 .ToList();
+
+                #region CENTER CONDUIT CREATE TO FIND INTERSECT ANY OTHER CONDUITS 
+                List<Element> conduitsBetween = new List<Element>();
+                XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
+                  ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
+                   ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
+                double outsideDiameter1 = matchingElements[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                double outsideDiameter2 = matchingElements[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
+                XYZ direction = connectedLine.Direction;
+                XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
+                XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
+                Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
+                otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
+                List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
+                double largestDiameter = collector.Max(conduit =>
+                {
+                    Parameter diameterParam = conduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
+                    return diameterParam?.AsDouble() ?? 0;
+                });
+                Parameter newDiameterParam = otherConduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
+                if (newDiameterParam != null && newDiameterParam.IsReadOnly == false)
+                {
+                    newDiameterParam.Set(largestDiameter);
+                }
+                #endregion
+                #region SOLID INTERSECTION METHOD
+                Options opt = new Options();
+                GeometryElement GE = otherConduit.get_Geometry(opt);
+                foreach (GeometryObject GO in GE)
+                {
+                    if (GO is Solid)
+                    {
+                        Solid solid = (Solid)GO;
+                        ElementIntersectsSolidFilter filter = new ElementIntersectsSolidFilter(solid);
+                        List<Conduit> ConduitsIntersecting = new FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(typeof(Conduit))
+                            .WherePasses(filter).Cast<Conduit>().ToList();
+                        foreach (Conduit con in ConduitsIntersecting)
+                        {
+                            if (con.Id != matchingElements[0].Id)
+                            {
+                                foreach (KeyValuePair<XYZ, Element> PS in multilayerdPS)
                                 {
-                                    foreach (KeyValuePair<XYZ, Element> PS in multilayerdPS)
+                                    if ((PS.Value as Conduit).Id == con.Id)
                                     {
-                                        if ((PS.Value as Conduit).Id == con.Id)
-                                        {
-                                            GroupedElement.Add(PS.Value);
-                                        }
+                                        GroupedElement.Add(PS.Value);
                                     }
                                 }
                             }
                         }
                     }
-                    GroupedElement = ArrangeConduits(doc, matchingElements[0] as Conduit, GroupedElement);
-                    #endregion
-                    /*#region CURVE INTERSECTION METHOD
-                    conduitsBetween.Add(matchingElements[0]);
-                    foreach (Element conduit in collector)
+                }
+                GroupedElement = ArrangeConduits(doc, matchingElements[0] as Conduit, GroupedElement);
+                #endregion
+                /*#region CURVE INTERSECTION METHOD
+                conduitsBetween.Add(matchingElements[0]);
+                foreach (Element conduit in collector)
+                {
+                    LocationCurve conduitCurve = conduit.Location as LocationCurve;
+                    if (conduitCurve == null) continue;
+                    if (conduit.Id == otherConduit.Id) continue;
+                    LocationCurve otherConduitCurve = otherConduit.Location as LocationCurve;
+                    if (conduit.Id != matchingElements[0].Id && conduit.Id != matchingElements[1].Id)
                     {
-                        LocationCurve conduitCurve = conduit.Location as LocationCurve;
-                        if (conduitCurve == null) continue;
-                        if (conduit.Id == otherConduit.Id) continue;
-                        LocationCurve otherConduitCurve = otherConduit.Location as LocationCurve;
-                        if (conduit.Id != matchingElements[0].Id && conduit.Id != matchingElements[1].Id)
+                        XYZ IP = Utility.GetIntersection(conduitCurve.Curve as Line, otherConduitCurve.Curve as Line);
+                        if (IP != null)
                         {
-                            XYZ IP = Utility.GetIntersection(conduitCurve.Curve as Line, otherConduitCurve.Curve as Line);
-                            if (IP != null)
+                            if (!conduitsBetween.Contains(otherConduit))
                             {
-                                if (!conduitsBetween.Contains(otherConduit))
-                                {
-                                    conduitsBetween.Add(conduit);
-                                }
+                                conduitsBetween.Add(conduit);
                             }
                         }
                     }
-                    conduitsBetween.Add(matchingElements[1]);
-                    GroupedElement = conduitsBetween;
-                    #endregion*/
                 }
-                else
-                {
-                    List<XYZ> orderedPoints = CreateBoundingBoxLine(linesWithLengths, matchingElements, multilayerdPS, doc);
-                    GroupedElement = multilayerdPS
-                                                  .Where(kvp => orderedPoints.Contains(kvp.Key))
-                                                  .Select(kvp => kvp.Value)
-                                                  .ToList();
-                    _previousXYZ = cornerPoints[0];
-                }
+                conduitsBetween.Add(matchingElements[1]);
+                GroupedElement = conduitsBetween;
+                #endregion*/
                 if (otherConduit != null)
                 {
                     doc.Delete(otherConduit.Id);
