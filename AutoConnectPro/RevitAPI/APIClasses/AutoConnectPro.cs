@@ -69,6 +69,7 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
         bool _isfirst;
         public List<Element> _deleteElements = new List<Element>();
         private readonly DateTime startDate = DateTime.UtcNow;
+        bool isoffsetwindowClose = false;
 
         #region  Class Member Variables
         /// <summary>
@@ -688,156 +689,158 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                     {
                                                         if (CongridDictionary1.Count == 1)
                                                         {
-                                                            if (MainWindow.Instance.isoffset)
+                                                            Utility.GroupByElevation(SelectedElements, offsetVariable, ref group);
+                                                            Dictionary<double, List<Element>> groupPrimary = new Dictionary<double, List<Element>>();
+                                                            Dictionary<double, List<Element>> groupSecondary = new Dictionary<double, List<Element>>();
+                                                            int k = group.Count / 2;
+                                                            for (int i = 0; i < group.Count(); i++)
                                                             {
-                                                                Utility.GroupByElevation(SelectedElements, offsetVariable, ref group);
-
-
-                                                                Dictionary<double, List<Element>> groupPrimary = new Dictionary<double, List<Element>>();
-                                                                Dictionary<double, List<Element>> groupSecondary = new Dictionary<double, List<Element>>();
-                                                                int k = group.Count / 2;
-                                                                for (int i = 0; i < group.Count(); i++)
+                                                                if (i >= k)
                                                                 {
-                                                                    if (i >= k)
-                                                                    {
-                                                                        groupSecondary.Add(group.ElementAt(i).Key, group.ElementAt(i).Value);
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        groupPrimary.Add(group.ElementAt(i).Key, group.ElementAt(i).Value);
-                                                                    }
-
+                                                                    groupSecondary.Add(group.ElementAt(i).Key, group.ElementAt(i).Value);
+                                                                }
+                                                                else
+                                                                {
+                                                                    groupPrimary.Add(group.ElementAt(i).Key, group.ElementAt(i).Value);
                                                                 }
 
-                                                                /////////
-                                                                if (groupPrimary.Count == groupSecondary.Count)
+                                                            }
+                                                            /////////
+                                                            if (groupPrimary.Count > 0 && groupSecondary.Count > 0)
+                                                            {
+                                                                //CHECK THE ELEMENTS HAVE BOTH SIDES FITTINGS
+                                                                bool isErrorOccuredinAutoConnect = false;
+                                                                List<Element> groupPrimarySelectedElements = new List<Element>();
+                                                                List<Element> groupSecondarySelectedElements = new List<Element>();
+                                                                groupPrimarySelectedElements = groupPrimary.Select(x => x.Value.FirstOrDefault()).ToList();
+                                                                groupSecondarySelectedElements = groupSecondary.Select(x => x.Value.FirstOrDefault()).ToList();
+                                                                //if ((groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count > 0 && groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count > 0) &&
+                                                                //    (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count))
+                                                                if (groupPrimary == null && groupSecondary != null && groupPrimary.Count > 0 && groupSecondary.Count > 0 &&
+                                                                   groupPrimary.Count == groupSecondary.Count)
                                                                 {
-
-                                                                    for (int i = 0; i < groupPrimary.Count; i++)
+                                                                    if (groupPrimary.Count == groupSecondary.Count)
                                                                     {
-
-                                                                        List<Element> primarySortedElementspre = SortbyPlane(doc, groupPrimary.ElementAt(i).Value);
-
-                                                                        List<Element> secondarySortedElementspre = SortbyPlane(doc, groupSecondary.ElementAt(i).Value);
-
-
-                                                                        bool isNotStaright = ReverseingConduits(doc, ref primarySortedElementspre, ref secondarySortedElementspre);
-
-                                                                        //defind the primary and secondary sets 
-                                                                        double conduitlengthone = primarySortedElementspre[0].LookupParameter("Length").AsDouble();
-                                                                        double conduitlengthsecond = secondarySortedElementspre[0].LookupParameter("Length").AsDouble();
-                                                                        List<Element> primarySortedElements = new List<Element>();
-                                                                        List<Element> secondarySortedElements = new List<Element>();
-                                                                        if (conduitlengthone < conduitlengthsecond)
+                                                                        for (int i = 0; i < groupPrimary.Count; i++)
                                                                         {
-                                                                            primarySortedElements = primarySortedElementspre;
-                                                                            secondarySortedElements = secondarySortedElementspre;
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            primarySortedElements = secondarySortedElementspre;
-                                                                            secondarySortedElements = primarySortedElementspre;
-                                                                        }
-
-                                                                        if (primarySortedElements.Count == secondarySortedElements.Count)
-                                                                        {
-                                                                            Element primaryFirst = primarySortedElements.First();
-                                                                            Element secondaryFirst = secondarySortedElements.First();
-                                                                            Element primaryLast = primarySortedElements.Last();
-                                                                            Element secondaryLast = secondarySortedElements.Last();
-
-                                                                            XYZ priFirstDir = ((primaryFirst.Location as LocationCurve).Curve as Line).Direction;
-                                                                            XYZ priLastDir = ((primaryLast.Location as LocationCurve).Curve as Line).Direction;
-                                                                            XYZ secFirstDir = ((secondaryFirst.Location as LocationCurve).Curve as Line).Direction;
-                                                                            XYZ secLastDir = ((secondaryLast.Location as LocationCurve).Curve as Line).Direction;
-
-                                                                            bool isSamDireFirst = Utility.IsSameDirectionWithRoundOff(priFirstDir, secFirstDir, 3) || Utility.IsSameDirectionWithRoundOff(priFirstDir, secLastDir, 3);
-                                                                            bool isSamDireLast = Utility.IsSameDirectionWithRoundOff(priLastDir, secFirstDir, 3) || Utility.IsSameDirectionWithRoundOff(priLastDir, secLastDir, 3);
-                                                                            //Same Elevations 
-                                                                            bool isSamDir = !isNotStaright || isSamDireFirst && isSamDireLast;
-                                                                            if (!isSamDir)
+                                                                            List<Element> primarySortedElementspre = SortbyPlane(doc, groupPrimary.ElementAt(i).Value);
+                                                                            List<Element> secondarySortedElementspre = SortbyPlane(doc, groupSecondary.ElementAt(i).Value);
+                                                                            bool isNotStaright = ReverseingConduits(doc, ref primarySortedElementspre, ref secondarySortedElementspre);
+                                                                            //defind the primary and secondary sets 
+                                                                            double conduitlengthone = primarySortedElementspre[0].LookupParameter("Length").AsDouble();
+                                                                            double conduitlengthsecond = secondarySortedElementspre[0].LookupParameter("Length").AsDouble();
+                                                                            List<Element> primarySortedElements = new List<Element>();
+                                                                            List<Element> secondarySortedElements = new List<Element>();
+                                                                            if (conduitlengthone < conduitlengthsecond)
                                                                             {
-                                                                                Line priFirst = ((primaryFirst.Location as LocationCurve).Curve as Line);
-                                                                                Line priLast = ((primaryLast.Location as LocationCurve).Curve as Line);
-                                                                                Line secFirst = ((secondaryFirst.Location as LocationCurve).Curve as Line);
-                                                                                Line secLast = ((secondaryLast.Location as LocationCurve).Curve as Line);
+                                                                                primarySortedElements = primarySortedElementspre;
+                                                                                secondarySortedElements = secondarySortedElementspre;
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                primarySortedElements = secondarySortedElementspre;
+                                                                                secondarySortedElements = primarySortedElementspre;
+                                                                            }
+                                                                            if (primarySortedElements.Count == secondarySortedElements.Count)
+                                                                            {
+                                                                                Element primaryFirst = primarySortedElements.First();
+                                                                                Element secondaryFirst = secondarySortedElements.First();
+                                                                                Element primaryLast = primarySortedElements.Last();
+                                                                                Element secondaryLast = secondarySortedElements.Last();
 
-                                                                                XYZ firstInte = MultiConnectFindIntersectionPoint(priFirst, secFirst);
-                                                                                if (firstInte != null)
+                                                                                XYZ priFirstDir = ((primaryFirst.Location as LocationCurve).Curve as Line).Direction;
+                                                                                XYZ priLastDir = ((primaryLast.Location as LocationCurve).Curve as Line).Direction;
+                                                                                XYZ secFirstDir = ((secondaryFirst.Location as LocationCurve).Curve as Line).Direction;
+                                                                                XYZ secLastDir = ((secondaryLast.Location as LocationCurve).Curve as Line).Direction;
+
+                                                                                bool isSamDireFirst = Utility.IsSameDirectionWithRoundOff(priFirstDir, secFirstDir, 3) || Utility.IsSameDirectionWithRoundOff(priFirstDir, secLastDir, 3);
+                                                                                bool isSamDireLast = Utility.IsSameDirectionWithRoundOff(priLastDir, secFirstDir, 3) || Utility.IsSameDirectionWithRoundOff(priLastDir, secLastDir, 3);
+                                                                                //Same Elevations 
+                                                                                bool isSamDir = !isNotStaright || isSamDireFirst && isSamDireLast;
+                                                                                if (!isSamDir)
                                                                                 {
-                                                                                    firstInte = MultiConnectFindIntersectionPoint(priFirst, secLast);
+                                                                                    Line priFirst = ((primaryFirst.Location as LocationCurve).Curve as Line);
+                                                                                    Line priLast = ((primaryLast.Location as LocationCurve).Curve as Line);
+                                                                                    Line secFirst = ((secondaryFirst.Location as LocationCurve).Curve as Line);
+                                                                                    Line secLast = ((secondaryLast.Location as LocationCurve).Curve as Line);
 
+                                                                                    XYZ firstInte = MultiConnectFindIntersectionPoint(priFirst, secFirst);
                                                                                     if (firstInte != null)
                                                                                     {
-                                                                                        isSamDir = false;
+                                                                                        firstInte = MultiConnectFindIntersectionPoint(priFirst, secLast);
+
+                                                                                        if (firstInte != null)
+                                                                                        {
+                                                                                            isSamDir = false;
+                                                                                        }
                                                                                     }
                                                                                 }
-                                                                            }
-                                                                            if (!isSamDir && Math.Round(groupPrimary.ElementAt(i).Key, 4) == Math.Round(groupSecondary.ElementAt(i).Key, 4))
-                                                                            {
-                                                                                //Multi connect
-                                                                                System.Windows.MessageBox.Show("Warning. \n" + "Please use Multi Connect tool for the selected group of conduits to connect", "Alert", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                                                                return;
-                                                                            }
-                                                                            else if (isSamDir && Math.Round(groupPrimary.ElementAt(i).Key, 4) == Math.Round(groupSecondary.ElementAt(i).Key, 4))
-                                                                            {
-                                                                                Line priFirst = ((primaryFirst.Location as LocationCurve).Curve as Line);
-                                                                                Line priLast = ((primaryLast.Location as LocationCurve).Curve as Line);
-                                                                                Line secFirst = ((secondaryFirst.Location as LocationCurve).Curve as Line);
-                                                                                Line secLast = ((secondaryLast.Location as LocationCurve).Curve as Line);
-                                                                                ConnectorSet firstConnectors = null;
-                                                                                ConnectorSet secondConnectors = null;
-                                                                                firstConnectors = Utility.GetConnectors(primaryFirst);
-                                                                                secondConnectors = Utility.GetConnectors(secondaryFirst);
-                                                                                Utility.GetClosestConnectors(firstConnectors, secondConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
-                                                                                Line checkline = Line.CreateBound(ConnectorOne.Origin, new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z));
-                                                                                XYZ p1 = new XYZ(Math.Round(priFirst.Direction.X, 2), Math.Round(priFirst.Direction.Y, 2), 0);
-                                                                                XYZ p2 = new XYZ(Math.Round(checkline.Direction.X, 2), Math.Round(checkline.Direction.Y, 2), 0);
-                                                                                bool isSamDirecheckline = new XYZ(Math.Abs(p1.X), Math.Abs(p1.Y), 0).IsAlmostEqualTo(new XYZ(Math.Abs(p2.X), Math.Abs(p2.Y), 0));
-                                                                                if (isSamDirecheckline)
+                                                                                if (!isSamDir && Math.Round(groupPrimary.ElementAt(i).Key, 4) == Math.Round(groupSecondary.ElementAt(i).Key, 4))
                                                                                 {
-                                                                                    //Extend
-                                                                                    XYZ pickpoint = new XYZ();
-                                                                                    if (ChangesInformationForm.instance.MidSaddlePt != null)
+                                                                                    //Multi connect
+                                                                                    System.Windows.MessageBox.Show("Warning. \n" + "Please use Multi Connect tool for the selected group of conduits to connect", "Alert", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                                                    return;
+                                                                                }
+                                                                                else if (isSamDir && Math.Round(groupPrimary.ElementAt(i).Key, 4) == Math.Round(groupSecondary.ElementAt(i).Key, 4))
+                                                                                {
+                                                                                    Line priFirst = ((primaryFirst.Location as LocationCurve).Curve as Line);
+                                                                                    Line priLast = ((primaryLast.Location as LocationCurve).Curve as Line);
+                                                                                    Line secFirst = ((secondaryFirst.Location as LocationCurve).Curve as Line);
+                                                                                    Line secLast = ((secondaryLast.Location as LocationCurve).Curve as Line);
+                                                                                    ConnectorSet firstConnectors = null;
+                                                                                    ConnectorSet secondConnectors = null;
+                                                                                    firstConnectors = Utility.GetConnectors(primaryFirst);
+                                                                                    secondConnectors = Utility.GetConnectors(secondaryFirst);
+                                                                                    Utility.GetClosestConnectors(firstConnectors, secondConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                                                                    Line checkline = Line.CreateBound(ConnectorOne.Origin, new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z));
+                                                                                    XYZ p1 = new XYZ(Math.Round(priFirst.Direction.X, 2), Math.Round(priFirst.Direction.Y, 2), 0);
+                                                                                    XYZ p2 = new XYZ(Math.Round(checkline.Direction.X, 2), Math.Round(checkline.Direction.Y, 2), 0);
+                                                                                    bool isSamDirecheckline = new XYZ(Math.Abs(p1.X), Math.Abs(p1.Y), 0).IsAlmostEqualTo(new XYZ(Math.Abs(p2.X), Math.Abs(p2.Y), 0));
+                                                                                    if (isSamDirecheckline)
                                                                                     {
-                                                                                        // ElementId midelm= ChangesInformationForm.instance.MidSaddlePt.Owner.Id;
-                                                                                        var CongridDictionary = Utility.GroupByElements(ChangesInformationForm.instance.MidSaddlePt);
-                                                                                        Dictionary<double, List<Element>> grPrimary = Utility.GroupByElementsWithElevation(CongridDictionary.First().Value.Select(x => x.Conduit).ToList(), offsetVariable);
-                                                                                        Dictionary<double, List<Element>> grSecondary = Utility.GroupByElementsWithElevation(CongridDictionary.Last().Value.Select(x => x.Conduit).ToList(), offsetVariable);
-                                                                                        if (grPrimary.Count == grSecondary.Count)
+                                                                                        //Extend
+                                                                                        XYZ pickpoint = new XYZ();
+                                                                                        if (ChangesInformationForm.instance.MidSaddlePt != null)
                                                                                         {
-                                                                                            for (int j = 0; j < grPrimary.Count; j++)
+                                                                                            // ElementId midelm= ChangesInformationForm.instance.MidSaddlePt.Owner.Id;
+                                                                                            var CongridDictionary = Utility.GroupByElements(ChangesInformationForm.instance.MidSaddlePt);
+                                                                                            Dictionary<double, List<Element>> grPrimary = Utility.GroupByElementsWithElevation(CongridDictionary.First().Value.Select(x => x.Conduit).ToList(), offsetVariable);
+                                                                                            Dictionary<double, List<Element>> grSecondary = Utility.GroupByElementsWithElevation(CongridDictionary.Last().Value.Select(x => x.Conduit).ToList(), offsetVariable);
+                                                                                            if (grPrimary.Count == grSecondary.Count)
                                                                                             {
-
-                                                                                                List<Element> primarySortedElem = SortbyPlane(doc, grPrimary.ElementAt(j).Value);
-
-                                                                                                List<Element> secondarySortedElem = SortbyPlane(doc, grSecondary.ElementAt(j).Value);
-                                                                                                ConnectorSet connectorSetOne = Utility.GetConnectors(primarySortedElem.FirstOrDefault());
-                                                                                                ConnectorSet connectorSetTwo = Utility.GetConnectors(secondarySortedElem.FirstOrDefault());
-                                                                                                foreach (Connector connector in connectorSetOne)
+                                                                                                for (int j = 0; j < grPrimary.Count; j++)
                                                                                                 {
-                                                                                                    foreach (Connector connector2 in connectorSetTwo)
+
+                                                                                                    List<Element> primarySortedElem = SortbyPlane(doc, grPrimary.ElementAt(j).Value);
+
+                                                                                                    List<Element> secondarySortedElem = SortbyPlane(doc, grSecondary.ElementAt(j).Value);
+                                                                                                    ConnectorSet connectorSetOne = Utility.GetConnectors(primarySortedElem.FirstOrDefault());
+                                                                                                    ConnectorSet connectorSetTwo = Utility.GetConnectors(secondarySortedElem.FirstOrDefault());
+                                                                                                    foreach (Connector connector in connectorSetOne)
                                                                                                     {
-                                                                                                        ConnectorSet cs = connector.AllRefs;
-                                                                                                        ConnectorSet cs2 = connector2.AllRefs;
-                                                                                                        foreach (Connector c in cs)
+                                                                                                        foreach (Connector connector2 in connectorSetTwo)
                                                                                                         {
-                                                                                                            foreach (Connector c2 in cs2)
+                                                                                                            ConnectorSet cs = connector.AllRefs;
+                                                                                                            ConnectorSet cs2 = connector2.AllRefs;
+                                                                                                            foreach (Connector c in cs)
                                                                                                             {
-                                                                                                                if (c.Owner.Id == c2.Owner.Id)
+                                                                                                                foreach (Connector c2 in cs2)
                                                                                                                 {
-                                                                                                                    //List<XYZ> StEn = Utility.GetFittingStartAndEndPoint(doc.GetElement(c.Owner.Id) as FamilyInstance);
-                                                                                                                    // Line li = Line.CreateBound(StEn[0], StEn[1]);
-                                                                                                                    //XYZ m = Utility.GetMidPoint(li);
-                                                                                                                    // XYZ cross = li.Direction.CrossProduct(XYZ.BasisZ);
-                                                                                                                    // XYZ newStart = m + cross.Multiply(1);
-                                                                                                                    // XYZ newEnd = m - cross.Multiply(1);
-                                                                                                                    // Line verticalLine = Line.CreateBound(newStart, newEnd);
-                                                                                                                    // XYZ interSectionPoint = Utility.FindIntersectionPoint(verticalLine,li);
-                                                                                                                    // MessageBox.Show(interSectionPoint.ToString());
-                                                                                                                    XYZ ElbowLocationPoint = (doc.GetElement(c.Owner.Id).Location as LocationPoint).Point;
-                                                                                                                    pickpoint = ElbowLocationPoint;//new XYZ(c.Origin.X, c.Origin.Y, 0);
-                                                                                                                    break;
+                                                                                                                    if (c.Owner.Id == c2.Owner.Id)
+                                                                                                                    {
+                                                                                                                        //List<XYZ> StEn = Utility.GetFittingStartAndEndPoint(doc.GetElement(c.Owner.Id) as FamilyInstance);
+                                                                                                                        // Line li = Line.CreateBound(StEn[0], StEn[1]);
+                                                                                                                        //XYZ m = Utility.GetMidPoint(li);
+                                                                                                                        // XYZ cross = li.Direction.CrossProduct(XYZ.BasisZ);
+                                                                                                                        // XYZ newStart = m + cross.Multiply(1);
+                                                                                                                        // XYZ newEnd = m - cross.Multiply(1);
+                                                                                                                        // Line verticalLine = Line.CreateBound(newStart, newEnd);
+                                                                                                                        // XYZ interSectionPoint = Utility.FindIntersectionPoint(verticalLine,li);
+                                                                                                                        // MessageBox.Show(interSectionPoint.ToString());
+                                                                                                                        XYZ ElbowLocationPoint = (doc.GetElement(c.Owner.Id).Location as LocationPoint).Point;
+                                                                                                                        pickpoint = ElbowLocationPoint;//new XYZ(c.Origin.X, c.Origin.Y, 0);
+                                                                                                                        break;
+                                                                                                                    }
                                                                                                                 }
                                                                                                             }
                                                                                                         }
@@ -845,74 +848,128 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                                                                 }
                                                                                             }
                                                                                         }
+                                                                                        else
+                                                                                        {
+                                                                                            pickpoint = Utility.PickPoint(uiDoc);
+                                                                                        }
+                                                                                        if (pickpoint != null)
+                                                                                            ThreePtSaddleExecute(uiApp, ref primarySortedElements, ref secondarySortedElements, pickpoint);
+
                                                                                     }
                                                                                     else
                                                                                     {
-                                                                                        pickpoint = Utility.PickPoint(uiDoc);
+                                                                                        //Hoffset //else if
+                                                                                        HoffsetExecute(uiApp, ref primarySortedElements, ref secondarySortedElements);
+                                                                                        isOffsetTool = true;
+                                                                                        isoffsetwindowClose = true;
                                                                                     }
-                                                                                    if (pickpoint != null)
-                                                                                        ThreePtSaddleExecute(uiApp, ref primarySortedElements, ref secondarySortedElements, pickpoint);
-
                                                                                 }
                                                                                 else
                                                                                 {
-                                                                                    //Hoffset //else if
-                                                                                    HoffsetExecute(uiApp, ref primarySortedElements, ref secondarySortedElements);
-                                                                                }
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                bool isVerticalConduits = false;
-                                                                                Line priFirst = ((primaryFirst.Location as LocationCurve).Curve as Line);
-                                                                                Line priLast = ((primaryLast.Location as LocationCurve).Curve as Line);
-                                                                                Line secFirst = ((secondaryFirst.Location as LocationCurve).Curve as Line);
-                                                                                Line secLast = ((secondaryLast.Location as LocationCurve).Curve as Line);
-                                                                                XYZ directionOne = priFirst.Direction;
-                                                                                XYZ directionTwo = secFirst.Direction;
-                                                                                isVerticalConduits = new XYZ(0, 0, Math.Abs(directionOne.Z)).IsAlmostEqualTo(XYZ.BasisZ)
-                                                                                    && new XYZ(0, 0, Math.Abs(directionTwo.Z)).IsAlmostEqualTo(XYZ.BasisZ);
+                                                                                    bool isVerticalConduits = false;
+                                                                                    Line priFirst = ((primaryFirst.Location as LocationCurve).Curve as Line);
+                                                                                    Line priLast = ((primaryLast.Location as LocationCurve).Curve as Line);
+                                                                                    Line secFirst = ((secondaryFirst.Location as LocationCurve).Curve as Line);
+                                                                                    Line secLast = ((secondaryLast.Location as LocationCurve).Curve as Line);
+                                                                                    XYZ directionOne = priFirst.Direction;
+                                                                                    XYZ directionTwo = secFirst.Direction;
+                                                                                    isVerticalConduits = new XYZ(0, 0, Math.Abs(directionOne.Z)).IsAlmostEqualTo(XYZ.BasisZ)
+                                                                                        && new XYZ(0, 0, Math.Abs(directionTwo.Z)).IsAlmostEqualTo(XYZ.BasisZ);
 
-                                                                                ConnectorSet firstConnectors = null;
-                                                                                ConnectorSet secondConnectors = null;
-                                                                                firstConnectors = Utility.GetConnectors(primaryFirst);
-                                                                                secondConnectors = Utility.GetConnectors(secondaryFirst);
-                                                                                Utility.GetClosestConnectors(firstConnectors, secondConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
-                                                                                Line checkline = Line.CreateBound(ConnectorOne.Origin, new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z));
-                                                                                XYZ p1 = new XYZ(Math.Round(priFirst.Direction.X, 2), Math.Round(priFirst.Direction.Y, 2), 0);
-                                                                                XYZ p2 = new XYZ(Math.Round(checkline.Direction.X, 2), Math.Round(checkline.Direction.Y, 2), 0);
-                                                                                bool isSamDirecheckline = new XYZ(Math.Abs(p1.X), Math.Abs(p1.Y), 0).IsAlmostEqualTo(new XYZ(Math.Abs(p2.X), Math.Abs(p2.Y), 0));
+                                                                                    ConnectorSet firstConnectors = null;
+                                                                                    ConnectorSet secondConnectors = null;
+                                                                                    firstConnectors = Utility.GetConnectors(primaryFirst);
+                                                                                    secondConnectors = Utility.GetConnectors(secondaryFirst);
+                                                                                    Utility.GetClosestConnectors(firstConnectors, secondConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                                                                    Line checkline = Line.CreateBound(ConnectorOne.Origin, new XYZ(ConnectorTwo.Origin.X, ConnectorTwo.Origin.Y, ConnectorOne.Origin.Z));
+                                                                                    XYZ p1 = new XYZ(Math.Round(priFirst.Direction.X, 2), Math.Round(priFirst.Direction.Y, 2), 0);
+                                                                                    XYZ p2 = new XYZ(Math.Round(checkline.Direction.X, 2), Math.Round(checkline.Direction.Y, 2), 0);
+                                                                                    bool isSamDirecheckline = new XYZ(Math.Abs(p1.X), Math.Abs(p1.Y), 0).IsAlmostEqualTo(new XYZ(Math.Abs(p2.X), Math.Abs(p2.Y), 0));
 
-                                                                                double priSlope = -Math.Round(priFirst.Direction.X, 6) / Math.Round(priFirst.Direction.Y, 6);
-                                                                                double SecSlope = -Math.Round(secFirst.Direction.X, 6) / Math.Round(secFirst.Direction.Y, 6);
+                                                                                    double priSlope = -Math.Round(priFirst.Direction.X, 6) / Math.Round(priFirst.Direction.Y, 6);
+                                                                                    double SecSlope = -Math.Round(secFirst.Direction.X, 6) / Math.Round(secFirst.Direction.Y, 6);
 
-                                                                                if ((priSlope == -1 && SecSlope == 0) ||
-                                                                                    Math.Round((Math.Round(priSlope, 5)) * (Math.Round(SecSlope, 5)), 4) == -1 ||
-                                                                                    Math.Round((Math.Round(priSlope, 5)) * (Math.Round(SecSlope, 5)), 4).ToString() == double.NaN.ToString() && !isVerticalConduits)
-                                                                                {
-                                                                                    //kick
-                                                                                    KickExecute(uiApp, ref primarySortedElements, ref secondarySortedElements, i);
-                                                                                }
-                                                                                else if (isSamDirecheckline)
-                                                                                {
-                                                                                    //Voffset
-                                                                                    VoffsetExecute(uiApp, ref primarySortedElements, ref secondarySortedElements);
-                                                                                }
-                                                                                else
-                                                                                {
+                                                                                    if ((priSlope == -1 && SecSlope == 0) ||
+                                                                                        Math.Round((Math.Round(priSlope, 5)) * (Math.Round(SecSlope, 5)), 4) == -1 ||
+                                                                                        Math.Round((Math.Round(priSlope, 5)) * (Math.Round(SecSlope, 5)), 4).ToString() == double.NaN.ToString() && !isVerticalConduits)
+                                                                                    {
+                                                                                        //kick
+                                                                                        KickExecute(uiApp, ref primarySortedElements, ref secondarySortedElements, i);
+                                                                                    }
+                                                                                    else if (isSamDirecheckline)
+                                                                                    {
+                                                                                        //Voffset
+                                                                                        VoffsetExecute(uiApp, ref primarySortedElements, ref secondarySortedElements);
+                                                                                    }
+                                                                                    else
+                                                                                    {
 
-                                                                                    //Hoffset //else if
-                                                                                    HoffsetExecute(uiApp, ref primarySortedElements, ref secondarySortedElements);
+                                                                                        //Hoffset //else if
+                                                                                        HoffsetExecute(uiApp, ref primarySortedElements, ref secondarySortedElements);
+                                                                                        isOffsetTool = true;
+                                                                                        isoffsetwindowClose = true;
+                                                                                    }
                                                                                 }
                                                                             }
                                                                         }
                                                                     }
                                                                 }
-                                                            }
-                                                            else
-                                                            {
-                                                                MainWindow.Instance.tgleAngleAcute.Visibility = System.Windows.Visibility.Visible;
-                                                                isOffsetTool = false;
-                                                                iswindowClose = false;
+                                                                if (isErrorOccuredinAutoConnect)
+                                                                {
+                                                                    BitmapImage OffLargeImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-32X32-red.png"));
+                                                                    BitmapImage OffImage = new BitmapImage(new Uri("pack://application:,,,/AutoConnectPro;component/Resources/Auto-Connect-16X16-red.png"));
+                                                                    ToggleConPakToolsButton.ItemText = "AutoConnect OFF";
+                                                                    ToggleConPakToolsButton.LargeImage = OffLargeImage;
+                                                                    ToggleConPakToolsButton.Image = OffImage;
+                                                                    ToggleConPakToolsButtonSample.Enabled = true;
+                                                                }
+                                                                else
+                                                                {
+                                                                    if (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count == groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count)
+                                                                    {
+                                                                        window = new MainWindow();
+                                                                        MainWindow.Instance.firstElement = new List<Element>();
+                                                                        MainWindow.Instance.firstElement.AddRange(SelectedElements);
+                                                                        MainWindow.Instance._document = doc;
+                                                                        MainWindow.Instance._uiDocument = uiDoc;
+                                                                        MainWindow.Instance._uiApplication = uiApp;
+
+                                                                        //window = new MainWindow();
+                                                                        window.Show();
+                                                                    }
+                                                                    else if (groupSecondary.Count == 1)
+                                                                    {
+                                                                        List<Element> dictFirstElement = CongridDictionary1.First().Value.Select(x => x.Conduit).ToList();
+                                                                        List<Element> dictSecondElement = CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList();
+                                                                        LocationCurve locCurve1 = dictFirstElement[0].Location as LocationCurve;
+                                                                        LocationCurve locCurve2 = dictSecondElement[0].Location as LocationCurve;
+                                                                        XYZ startPoint = Utility.GetXYvalue(locCurve1.Curve.GetEndPoint(0));
+                                                                        XYZ endPoint = Utility.GetXYvalue(locCurve2.Curve.GetEndPoint(1));
+                                                                        Line connectLine = Line.CreateBound(startPoint, endPoint);
+                                                                        if (Math.Round(locCurve1.Curve.GetEndPoint(0).Z, 4) == Math.Round(locCurve1.Curve.GetEndPoint(1).Z, 4) &&
+                                                                           Math.Round(locCurve2.Curve.GetEndPoint(0).Z, 4) != Math.Round(locCurve2.Curve.GetEndPoint(1).Z, 4))
+                                                                        {
+                                                                            window = new MainWindow();
+                                                                            MainWindow.Instance.firstElement = new List<Element>();
+                                                                            MainWindow.Instance.firstElement.AddRange(SelectedElements);
+                                                                            MainWindow.Instance._document = doc;
+                                                                            MainWindow.Instance._uiDocument = uiDoc;
+                                                                            MainWindow.Instance._uiApplication = uiApp;
+
+                                                                            //window = new MainWindow();
+                                                                            window.Show();
+                                                                        }
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        System.Windows.MessageBox.Show("Please select equal count of conduits", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                                        window = new MainWindow();
+                                                                        window.Close();
+                                                                        ExternalApplication.window = null;
+                                                                        SelectedElements.Clear();
+                                                                        uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                                    }
+                                                                }
                                                             }
                                                         }
                                                         else
