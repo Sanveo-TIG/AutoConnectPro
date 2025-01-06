@@ -109,6 +109,10 @@ namespace AutoConnectPro
                     else
                     {
                         System.Windows.MessageBox.Show("Please select the same number of conduits", "Warning-AutoConnect", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MainWindow.Instance.Close();
+                        ExternalApplication.window = null;
+                        SelectedElements.Clear();
+                        _uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
                     }
                 }
                 //}
