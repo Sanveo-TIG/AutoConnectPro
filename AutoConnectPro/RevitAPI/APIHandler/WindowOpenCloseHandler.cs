@@ -205,6 +205,14 @@ namespace AutoConnectPro
                             {
                                 transOrder.Start("Order the Vertical Conduits");
                                 List<Element> primaryelementCountStub = stubGroupPrimary.FirstOrDefault().Value;
+                                List<int> primaryGroupCount = new List<int>();
+                                foreach (KeyValuePair<double, List<Element>> sgP in stubGroupPrimary)
+                                {
+                                    if (!primaryGroupCount.Contains(sgP.Value.Count))
+                                    {
+                                        primaryGroupCount.Add(sgP.Value.Count);
+                                    }
+                                }
                                 Dictionary<XYZ, Element> multiorderthePrimaryElementsStub = new Dictionary<XYZ, Element>();
                                 Dictionary<XYZ, Element> multiordertheSecondaryElementsStub = new Dictionary<XYZ, Element>();
                                 List<Element> GroupedPrimaryElementStub = new List<Element>();
@@ -221,7 +229,7 @@ namespace AutoConnectPro
                                 }
                                 foreach (Element element in dictSecondElement)
                                 {
-                                    XYZ xyzPelement = ((element.Location as LocationCurve).Curve as Line).Origin;
+                                    XYZ xyzPelement = Utility.GetXYvalue(((element.Location as LocationCurve).Curve as Line).Origin);
                                     multiordertheSecondaryElementsStub.Add(xyzPelement, element);
                                 }
                                 //STUB DOWN MULTI LAYER
@@ -245,6 +253,7 @@ namespace AutoConnectPro
                                     /*#region NEW LOGICS 
                                     int m = 0;
                                     int verticalLayerCount = 0;
+                                    int v = 0;
                                     do
                                     {
                                         List<XYZ> xyzListPrimary = new List<XYZ>();
@@ -253,6 +262,11 @@ namespace AutoConnectPro
                                         List<Element> Sele = FindCornerConduitsInclinedVerticalConduits(multiordertheSecondaryElementsStub, xyzListSecondary, doc, verticalLayerCount, primaryelementCountStub);
                                         dictSecondaryElementStub.Add(m, Sele);
                                         GroupedSecondaryElementStub.AddRange(Sele);
+                                        if (v == 0)
+                                        {
+                                            verticalLayerCount = GroupedSecondaryElementStub.Count;
+                                        }
+                                        v++;
                                         m++;
                                         multiordertheSecondaryElementsStub = multiordertheSecondaryElementsStub.Where(kvp => !GroupedSecondaryElementStub.Any(e => e.Id == kvp.Value.Id))
                                                                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -269,7 +283,7 @@ namespace AutoConnectPro
                                             List<XYZ> xyzListPrimary = new List<XYZ>();
                                             List<XYZ> xyzListSecondary = new List<XYZ>();
                                             xyzListSecondary.AddRange(multiordertheSecondaryElementsStub.Select(x => x.Key));
-                                            List<Element> Sele = FindCornerConduitsStub(multiordertheSecondaryElementsStub, xyzListSecondary, doc, isangledVerticalConduitsStub, primaryelementCountStub);
+                                            List<Element> Sele = FindCornerConduitsStub(multiordertheSecondaryElementsStub, xyzListSecondary, doc, isangledVerticalConduitsStub, primaryelementCountStub, primaryGroupCount);
                                             dictSecondaryElementStub.Add(i, Sele);
                                             GroupedSecondaryElementStub.AddRange(Sele);
                                             i++;
@@ -288,7 +302,7 @@ namespace AutoConnectPro
                                             List<XYZ> xyzListPrimary = new List<XYZ>();
                                             List<XYZ> xyzListSecondary = new List<XYZ>();
                                             xyzListSecondary.AddRange(multiordertheSecondaryElementsStub.Select(x => x.Key));
-                                            List<Element> Sele = FindCornerConduitsStub(multiordertheSecondaryElementsStub, xyzListSecondary, doc, isangledVerticalConduitsStub, primaryelementCountStub);
+                                            List<Element> Sele = FindCornerConduitsStub(multiordertheSecondaryElementsStub, xyzListSecondary, doc, isangledVerticalConduitsStub, primaryelementCountStub, primaryGroupCount);
                                             dictSecondaryElementStub.Add(i, Sele);
                                             GroupedSecondaryElementStub.AddRange(Sele);
                                             i++;
@@ -1086,13 +1100,13 @@ namespace AutoConnectPro
                                                         foreach (Element element in primarySortedElements)
                                                         {
                                                             XYZ xyzPelement = ((element.Location as LocationCurve).Curve as Line).Origin;
-                                                            multiorderthePrimaryElements.Add(xyzPelement, element);
+                                                            multiorderthePrimaryElements.Add(new XYZ(xyzPelement.X, xyzPelement.Y, 0), element);
                                                         }
                                                         multiorderthePrimaryElements = multiorderthePrimaryElements.OrderBy(kvp => kvp.Key, new XYZComparer()).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                                                         foreach (Element element in secondarySortedElements)
                                                         {
-                                                            XYZ xyzPelement = ((element.Location as LocationCurve).Curve as Line).Origin;
-                                                            multiordertheSecondaryElements.Add(xyzPelement, element);
+                                                            XYZ xyzSelement = Utility.GetXYvalue(((element.Location as LocationCurve).Curve as Line).Origin);
+                                                            multiordertheSecondaryElements.Add(xyzSelement, element);
                                                         }
                                                         multiordertheSecondaryElements = multiordertheSecondaryElements.OrderBy(kvp => kvp.Key, new XYZComparer()).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                                                         foreach (KeyValuePair<XYZ, Element> pair in multiorderthePrimaryElements)
@@ -1112,7 +1126,6 @@ namespace AutoConnectPro
                                                             using (Transaction trans = new Transaction(doc))
                                                             {
                                                                 trans.Start("CornerGroup");
-
                                                                 List<XYZ> xyzPS = multiorderthePrimaryElements.Select(x => x.Key).ToList();
                                                                 List<XYZ> roundOFF = new List<XYZ>();
                                                                 foreach (var xyz in xyzPS)
@@ -1208,8 +1221,40 @@ namespace AutoConnectPro
                                                                         previousLines.Add(prisecLine);
                                                                     }
                                                                 }
+                                                                else if (reverseSecElements.Count == 1 && reversePriElements.Count == 1)
+                                                                {
+                                                                    bool isReverse = false;
+                                                                    List<Line> previousLines = new List<Line>();
+                                                                    for (int b = 0; b < reverseSecElements.Values.Count; b++)
+                                                                    {
+                                                                        Element priEle = reversePriElements[b].Cast<Element>().ToList().FirstOrDefault();
+                                                                        Element secEle = reverseSecElements[b].Cast<Element>().ToList().FirstOrDefault();
+                                                                        XYZ priOriginXYZ = Utility.GetXYvalue(Utility.GetLineFromConduit(priEle).Origin);
+                                                                        XYZ secOriginXYZ = Utility.GetXYvalue(Utility.GetLineFromConduit(secEle).Origin);
+                                                                        Line prisecLine = Line.CreateBound(priOriginXYZ, secOriginXYZ);
+                                                                        foreach (Line pl in previousLines)
+                                                                        {
+                                                                            if (Utility.GetIntersection(pl, prisecLine) != null)
+                                                                            {
+                                                                                GroupedSecondaryElement = new List<Element>();
+                                                                                reverseSecElements = reverseSecElements.OrderByDescending(kvp => kvp.Key).ToDictionary(x => x.Key, x => x.Value);
+                                                                                foreach (KeyValuePair<int, List<Element>> kvp in reverseSecElements)
+                                                                                {
+                                                                                    GroupedSecondaryElement.AddRange(kvp.Value);
+                                                                                }
+                                                                                isReverse = true;
+                                                                                break;
+                                                                            }
+                                                                        }
+                                                                        if (isReverse)
+                                                                            break;
+                                                                        previousLines.Add(prisecLine);
+                                                                    }
+                                                                }
                                                                 trans.Commit();
                                                             }
+                                                            /*GroupedPrimaryElement = Utility.ConduitInOrder(GroupedPrimaryElement);
+                                                             GroupedSecondaryElement = Utility.ConduitInOrder(GroupedSecondaryElement);*/
                                                             HoffsetExecute(_uiapp, ref GroupedPrimaryElement, ref GroupedSecondaryElement);
                                                             isOffsetTool = true;
                                                             isoffsetwindowClose = true;
@@ -1412,6 +1457,9 @@ namespace AutoConnectPro
 
                                             if (multiorderthePrimaryElements.Count > 1 && multiordertheSecondaryElements.Count > 1)
                                             {
+                                                bool isReverseCheck = false;
+                                                Dictionary<int, List<Element>> reversePriElements = new Dictionary<int, List<Element>>();
+                                                Dictionary<int, List<Element>> reverseSecElements = new Dictionary<int, List<Element>>();
                                                 using (Transaction trans = new Transaction(doc))
                                                 {
                                                     trans.Start("CornerGroup");
@@ -1428,7 +1476,6 @@ namespace AutoConnectPro
                                                     int verticalLayerCount = 0;
                                                     _previousXYZ = null;
                                                     int d = 0;
-                                                    Dictionary<int, List<Element>> reversePriElements = new Dictionary<int, List<Element>>();
                                                     List<Element> previousListofElement = new List<Element>();
                                                     do
                                                     {
@@ -1459,7 +1506,6 @@ namespace AutoConnectPro
                                                     _previousXYZ = null;
                                                     previousListofElement = new List<Element>();
                                                     int c = 0;
-                                                    Dictionary<int, List<Element>> reverseSecElements = new Dictionary<int, List<Element>>();
                                                     do
                                                     {
                                                         List<XYZ> xyzListPrimary = new List<XYZ>();
@@ -1511,7 +1557,50 @@ namespace AutoConnectPro
                                                             previousLines.Add(prisecLine);
                                                         }
                                                     }
+                                                    else if (reverseSecElements.Count == 1 && reversePriElements.Count == 1)
+                                                    {
+                                                        bool isReverse = false;
+                                                        List<Line> previousLines = new List<Line>();
+                                                        for (int b = 0; b < reverseSecElements.Values.Count; b++)
+                                                        {
+                                                            Element priEle = reversePriElements[b].Cast<Element>().ToList().FirstOrDefault();
+                                                            Element secEle = reverseSecElements[b].Cast<Element>().ToList().FirstOrDefault();
+                                                            XYZ priOriginXYZ = Utility.GetXYvalue(Utility.GetLineFromConduit(priEle).Origin);
+                                                            XYZ secOriginXYZ = Utility.GetXYvalue(Utility.GetLineFromConduit(secEle).Origin);
+                                                            Line prisecLine = Line.CreateBound(priOriginXYZ, secOriginXYZ);
+                                                            foreach (Line pl in previousLines)
+                                                            {
+                                                                if (Utility.GetIntersection(pl, prisecLine) != null)
+                                                                {
+                                                                    GroupedSecondaryElement = new List<Element>();
+                                                                    reverseSecElements = reverseSecElements.OrderByDescending(kvp => kvp.Key).ToDictionary(x => x.Key, x => x.Value);
+                                                                    foreach (KeyValuePair<int, List<Element>> kvp in reverseSecElements)
+                                                                    {
+                                                                        GroupedSecondaryElement.AddRange(kvp.Value);
+                                                                    }
+                                                                    isReverse = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (isReverse)
+                                                                break;
+                                                            previousLines.Add(prisecLine);
+                                                        }
+                                                    }
                                                     trans.Commit();
+                                                }
+                                                if ((!AreAllValueCountsEqual(reversePriElements)) && (!AreAllValueCountsEqual(reverseSecElements)))
+                                                {
+                                                    GroupedPrimaryElement = Utility.ConduitInOrder(GroupedPrimaryElement);
+                                                    GroupedSecondaryElement = Utility.ConduitInOrder(GroupedSecondaryElement);
+                                                    Line firstLine = Line.CreateBound(Utility.GetXYvalue(Utility.GetLineFromConduit(GroupedPrimaryElement.FirstOrDefault()).Origin),
+                                                                                     Utility.GetXYvalue(Utility.GetLineFromConduit(GroupedSecondaryElement.FirstOrDefault()).Origin));
+                                                    Line secondLine = Line.CreateBound(Utility.GetXYvalue(Utility.GetLineFromConduit(GroupedPrimaryElement.FirstOrDefault()).Origin),
+                                                                                     Utility.GetXYvalue(Utility.GetLineFromConduit(GroupedSecondaryElement.LastOrDefault()).Origin));
+                                                    if (firstLine.Length > secondLine.Length)
+                                                    {
+                                                        GroupedSecondaryElement.Reverse();
+                                                    }
                                                 }
                                                 HoffsetExecute(_uiapp, ref GroupedPrimaryElement, ref GroupedSecondaryElement);
                                                 isOffsetTool = true;
@@ -1812,6 +1901,30 @@ namespace AutoConnectPro
                 _AscendingElementwithNegativeAngle = false;
                 _DescendingElementwithNegativeAngle = false;
             }
+        }
+        bool AreAllValueCountsEqual(Dictionary<int, List<Element>> reversePriElements)
+        {
+            if (reversePriElements.Count <= 1)
+                return true;
+            int referenceCount = reversePriElements.First().Value.Count;
+            return reversePriElements.Values.All(list => list.Count == referenceCount);
+        }
+        public static XYZ GetIntersectionModeline(ModelLine modelLine1, ModelLine modelLine2)
+        {
+            Line line1 = modelLine1.GeometryCurve as Line;
+            Line line2 = modelLine2.GeometryCurve as Line;
+            if (line1 == null || line2 == null)
+            {
+                throw new InvalidOperationException("One or both ModelLines do not have valid Line geometry.");
+            }
+            IntersectionResultArray resultArray;
+            SetComparisonResult setComparisonResult = line1.Intersect(line2, out resultArray);
+            if (setComparisonResult != SetComparisonResult.Overlap || resultArray == null || resultArray.Size == 0)
+            {
+                return null;
+            }
+            IntersectionResult intersectionResult = resultArray.get_Item(0);
+            return intersectionResult.XYZPoint;
         }
         private static double CalculateDistanceFromPointToLine(Line line, XYZ point)
         {
@@ -2445,7 +2558,8 @@ namespace AutoConnectPro
                 return a.Z.CompareTo(b.Z);
             }
         }
-        public static List<Element> FindCornerConduitsStub(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, bool isangledVerticalConduits, List<Element> primaryelementCount)
+        public List<Element> FindCornerConduitsStub(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc,
+            bool isangledVerticalConduits, List<Element> primaryelementCount, List<int> primaryGroupCount)
         {
             List<Element> GroupedElement = new List<Element>();
             using (SubTransaction trans = new SubTransaction(doc))
@@ -2477,7 +2591,7 @@ namespace AutoConnectPro
 
                 if ((Math.Round(cornerPoints[0].X, 4) != Math.Round(cornerPoints[1].X, 4)))
                 {
-                    if (primaryelementCount.Count != multilayerdPS.Count)
+                    if (primaryelementCount.Count != multilayerdPS.Count && primaryGroupCount.Count == 1)
                     {
                         cornerPoints.AddRange(otherCorners);
                         List<XYZ> cornerPointsBackup = cornerPoints;
@@ -2529,11 +2643,15 @@ namespace AutoConnectPro
 
                         }
                     }
-                    else
+                    else if (primaryGroupCount.Count == 1)
                     {
                         PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
                      new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
                         linesWithLengths = new Dictionary<double, List<XYZ>> { { PCl1.Length, new List<XYZ>() { cornerPoints[0], cornerPoints[1] } } };
+                    }
+                    else
+                    {
+                        GroupedElement = multilayerdPS.Values.ToList();
                     }
                 }
                 else
@@ -2543,11 +2661,15 @@ namespace AutoConnectPro
                     linesWithLengths = new Dictionary<double, List<XYZ>> { { PCl1.Length, new List<XYZ>() { cornerPoints[0], cornerPoints[1] } } };
                 }
 
-                List<XYZ> XYZPoints = linesWithLengths.Select(x => x.Value).ToList().FirstOrDefault();
-                List<Element> matchingElements = multilayerdPS
-                                                 .Where(kvp => XYZPoints.Contains(kvp.Key))
-                                                 .Select(kvp => kvp.Value)
-                                                 .ToList();
+                List<Element> matchingElements = new List<Element>();
+                if (linesWithLengths.Count > 0)
+                {
+                    List<XYZ> XYZPoints = linesWithLengths.Select(x => x.Value).ToList().FirstOrDefault();
+                    matchingElements = multilayerdPS
+                                                       .Where(kvp => XYZPoints.Contains(kvp.Key))
+                                                       .Select(kvp => kvp.Value)
+                                                       .ToList();
+                }
                 if (isangledVerticalConduits)
                 {
                     XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
@@ -2563,7 +2685,6 @@ namespace AutoConnectPro
                     XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
                     Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
                     otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
-                    Element midPointConduit = null;
                     List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
                     List<Element> conduitsBetween = new List<Element>();
                     conduitsBetween.Add(matchingElements[0]);
@@ -2581,10 +2702,6 @@ namespace AutoConnectPro
                                 if (!conduitsBetween.Contains(otherConduit))
                                 {
                                     conduitsBetween.Add(conduit);
-                                }
-                                if (midPointConduit == null || midPointConduit.Id != conduit.Id)
-                                {
-                                    midPointConduit = conduit;
                                 }
                             }
                         }
