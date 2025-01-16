@@ -1454,7 +1454,6 @@ namespace AutoConnectPro
                                             //Grouping Logic
                                             List<Element> GroupedPrimaryElement = new List<Element>();
                                             List<Element> GroupedSecondaryElement = new List<Element>();
-
                                             if (multiorderthePrimaryElements.Count > 1 && multiordertheSecondaryElements.Count > 1)
                                             {
                                                 bool isReverseCheck = false;
