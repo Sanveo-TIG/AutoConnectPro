@@ -598,6 +598,18 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                                     //window = new MainWindow();
                                                                     window.Show();
                                                                 }
+                                                                else
+                                                                {
+                                                                    if (groupPrimary.Select(x => x.Value).ToList().FirstOrDefault().Count != groupSecondary.Select(x => x.Value).ToList().FirstOrDefault().Count)
+                                                                    {
+                                                                        System.Windows.MessageBox.Show("Please select equal count of conduits", "Warning-AUTOCONNECT", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                                                        window = new MainWindow();
+                                                                        window.Close();
+                                                                        ExternalApplication.window = null;
+                                                                        SelectedElements.Clear();
+                                                                        uiDoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                                                                    }
+                                                                }
                                                                 /* List<Element> OrderSecondary = new List<Element>();
                                                                  Dictionary<double, Element> ordertheUpperElements = new Dictionary<double, Element>();
                                                                  Dictionary<double, Element> ordertheLowerElements = new Dictionary<double, Element>();
