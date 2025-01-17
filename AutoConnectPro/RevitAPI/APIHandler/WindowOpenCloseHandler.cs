@@ -1414,6 +1414,12 @@ namespace AutoConnectPro
                                     }
                                 }
                             }
+                            else if (groupPrimary.Count != groupSecondary.Count)
+                            {
+                                System.Windows.MessageBox.Show("Conduits have different reference level", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);                                
+                                SelectedElements.Clear();
+                                uidoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
+                            }
                             else
                             {
                                 if (CongridDictionary1.First().Value.Count == CongridDictionary1.Last().Value.Count)
