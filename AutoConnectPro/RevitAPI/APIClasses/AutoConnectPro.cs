@@ -600,7 +600,9 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                                 }
                                                                 else
                                                                 {
-                                                                    if (groupPrimary.Count != groupSecondary.Count)
+                                                                    if (!groupPrimary.All(X => X.Value.TrueForAll(Y => Y.LookupParameter("Reference Level").AsElementId() == X.Value.FirstOrDefault().LookupParameter("Reference Level").AsElementId()))
+                                                                    && !groupSecondary.All(X => X.Value.TrueForAll(Y => Y.LookupParameter("Reference Level").AsElementId() == X.Value.FirstOrDefault().LookupParameter("Reference Level").AsElementId())))
+
                                                                     {
                                                                         System.Windows.MessageBox.Show("Conduits have different reference level", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                                                                         window = new MainWindow();
@@ -664,7 +666,8 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                                      window.Show();
                                                                  }*/
                                                             }
-                                                            else if (groupPrimary.Count != groupSecondary.Count)
+                                                            else if (!groupPrimary.All(X => X.Value.TrueForAll(Y => Y.LookupParameter("Reference Level").AsElementId() == X.Value.FirstOrDefault().LookupParameter("Reference Level").AsElementId()))
+                                                                    && !groupSecondary.All(X => X.Value.TrueForAll(Y => Y.LookupParameter("Reference Level").AsElementId() == X.Value.FirstOrDefault().LookupParameter("Reference Level").AsElementId())))
                                                             {
                                                                 System.Windows.MessageBox.Show("Conduits have different reference level", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                                                                 window = new MainWindow();

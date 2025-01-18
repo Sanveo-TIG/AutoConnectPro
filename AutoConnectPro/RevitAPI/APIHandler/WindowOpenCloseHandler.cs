@@ -1414,9 +1414,11 @@ namespace AutoConnectPro
                                     }
                                 }
                             }
-                            else if (groupPrimary.Count != groupSecondary.Count)
+
+                            else if (!groupPrimary.All(X => X.Value.TrueForAll(Y => Y.LookupParameter("Reference Level").AsElementId() == X.Value.FirstOrDefault().LookupParameter("Reference Level").AsElementId()))
+                                                                    && !groupSecondary.All(X => X.Value.TrueForAll(Y => Y.LookupParameter("Reference Level").AsElementId() == X.Value.FirstOrDefault().LookupParameter("Reference Level").AsElementId())))
                             {
-                                System.Windows.MessageBox.Show("Conduits have different reference level", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);                                
+                                System.Windows.MessageBox.Show("Conduits have different reference level", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                                 SelectedElements.Clear();
                                 uidoc.Selection.SetElementIds(new List<ElementId> { ElementId.InvalidElementId });
                             }
