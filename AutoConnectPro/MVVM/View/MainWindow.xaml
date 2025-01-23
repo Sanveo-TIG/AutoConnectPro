@@ -9,7 +9,7 @@
         xmlns:customUC="clr-namespace:TIGUtility;assembly=TIGUtility"
         Title="MainWindow" 
         WindowStartupLocation="Manual" Loaded="Window_Loaded"
-        FontFamily="/FittingAnnotation;component/Resources/Font/#Poppins Medium"  >
+        FontFamily="/FittingAnnotation;component/Resources/Font/#Poppins Medium" >
     <Window.Background >
         <SolidColorBrush Opacity="0" Color="White"></SolidColorBrush>
     </Window.Background>

@@ -199,7 +199,7 @@ namespace AutoConnectPro
                         //STUB AND KICK CONNECT                        
                         if ((new XYZ(0, 0, firstLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, firstLineEnd.Z)) &&
                            !new XYZ(0, 0, secLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, secLineEnd.Z))) ||
-                           !(new XYZ(0, 0, firstLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, firstLineEnd.Z)) &&
+                           (!new XYZ(0, 0, firstLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, firstLineEnd.Z)) &&
                            new XYZ(0, 0, secLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, secLineEnd.Z))))
                         {
                             //STUB PROCESS
