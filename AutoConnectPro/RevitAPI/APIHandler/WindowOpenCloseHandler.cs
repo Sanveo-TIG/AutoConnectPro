@@ -190,9 +190,17 @@ namespace AutoConnectPro
                     {
                         List<Element> dictFirstElement = CongridDictionary1.First().Value.Select(x => x.Conduit).ToList();
                         List<Element> dictSecondElement = CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList();
-                        //STUB AND KICK CONNECT
-                        if (Math.Round(Utility.GetLineFromConduit(dictFirstElement[0]).GetEndPoint(0).Z, 4) == Math.Round(Utility.GetLineFromConduit(dictFirstElement[0]).GetEndPoint(1).Z, 4) &&
-                           Math.Round(Utility.GetLineFromConduit(dictSecondElement[0]).GetEndPoint(0).Z, 4) != Math.Round(Utility.GetLineFromConduit(dictSecondElement[0]).GetEndPoint(1).Z, 4))
+                        Line firLine = (dictFirstElement[0].Location as LocationCurve).Curve as Line;
+                        XYZ firstLineStart = firLine.GetEndPoint(0);
+                        XYZ firstLineEnd = firLine.GetEndPoint(1);
+                        Line secLine = (dictSecondElement[0].Location as LocationCurve).Curve as Line;
+                        XYZ secLineStart = secLine.GetEndPoint(0);
+                        XYZ secLineEnd = secLine.GetEndPoint(1);
+                        //STUB AND KICK CONNECT                        
+                        if ((new XYZ(0, 0, firstLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, firstLineEnd.Z)) &&
+                           !new XYZ(0, 0, secLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, secLineEnd.Z))) ||
+                           !(new XYZ(0, 0, firstLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, firstLineEnd.Z)) &&
+                           new XYZ(0, 0, secLineStart.Z).IsAlmostEqualTo(new XYZ(0, 0, secLineEnd.Z))))
                         {
                             //STUB PROCESS
                             List<Element> dictSecondElementDUP = new List<Element>();
@@ -574,6 +582,7 @@ namespace AutoConnectPro
                                 transaction.Start("StubandKick");
                                 //90 Stub
                                 if (Utility.IsSameDirection(Utility.GetXYvalue(((dictFirstElement[0].Location as LocationCurve).Curve as Line).Direction),
+                                Utility.GetXYvalue(connectLine.Direction)) || Utility.IsSameDirection(Utility.GetXYvalue(((dictSecondElement[0].Location as LocationCurve).Curve as Line).Direction),
                                 Utility.GetXYvalue(connectLine.Direction)))
                                 {
                                     if (isStubCreate)

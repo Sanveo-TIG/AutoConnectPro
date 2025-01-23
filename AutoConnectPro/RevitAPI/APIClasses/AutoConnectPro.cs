@@ -3315,8 +3315,9 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
             }
             else
             {
-                groupedElements.Add(num, a_Elements);
-                a_Elements.Clear();
+                List<Element> elements = a_Elements.ToList();
+                groupedElements.Add(num, elements);
+                a_Elements = a_Elements.Except(elements).ToList();
             }
             if (a_Elements.Count > 0)
             {
