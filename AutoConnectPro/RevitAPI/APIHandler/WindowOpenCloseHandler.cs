@@ -2745,73 +2745,82 @@ namespace AutoConnectPro
         public static List<Element> FindCornerConduitsKick(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, bool isangledVerticalConduits, List<Element> primaryelementCount)
         {
             List<Element> GroupedElement = new List<Element>();
-            using (SubTransaction trans = new SubTransaction(doc))
+            if(xyzPS.Count > 1)
             {
-                trans.Start();
-                double maxDistance = 0;
-                XYZ firstCorner = null;
-                XYZ secondCorner = null;
-                for (int a = 0; a < xyzPS.Count; a++)
+                using (SubTransaction trans = new SubTransaction(doc))
                 {
-                    for (int j = a + 1; j < xyzPS.Count; j++)
+                    trans.Start();
+                    double maxDistance = 0;
+                    XYZ firstCorner = null;
+                    XYZ secondCorner = null;
+                    for (int a = 0; a < xyzPS.Count; a++)
                     {
-                        double distance = xyzPS[a].DistanceTo(xyzPS[j]);
-                        if (distance > maxDistance)
+                        for (int j = a + 1; j < xyzPS.Count; j++)
                         {
-                            maxDistance = distance;
-                            firstCorner = xyzPS[a];
-                            secondCorner = xyzPS[j];
+                            double distance = xyzPS[a].DistanceTo(xyzPS[j]);
+                            if (distance > maxDistance)
+                            {
+                                maxDistance = distance;
+                                firstCorner = xyzPS[a];
+                                secondCorner = xyzPS[j];
+                            }
                         }
                     }
-                }
-                List<XYZ> remainingPoints = xyzPS.Where(p => p != firstCorner && p != secondCorner).ToList();
-                List<XYZ> otherCorners = remainingPoints.OrderByDescending(p => DistanceToLine(firstCorner, secondCorner, p)).Take(2).ToList();
-                List<XYZ> cornerPoints = new List<XYZ> { firstCorner, secondCorner };
-                Line PCl1 = null;
-                Line PCl2 = null;
-                Line PCl3 = null;
-                Dictionary<double, List<XYZ>> linesWithLengths = new Dictionary<double, List<XYZ>>();
+                    List<XYZ> remainingPoints = xyzPS.Where(p => p != firstCorner && p != secondCorner).ToList();
+                    List<XYZ> otherCorners = remainingPoints.OrderByDescending(p => DistanceToLine(firstCorner, secondCorner, p)).Take(2).ToList();
+                    List<XYZ> cornerPoints = new List<XYZ> { firstCorner, secondCorner };
+                    Line PCl1 = null;
+                    Line PCl2 = null;
+                    Line PCl3 = null;
+                    Dictionary<double, List<XYZ>> linesWithLengths = new Dictionary<double, List<XYZ>>();
 
-                if ((Math.Round(cornerPoints[0].X, 4) != Math.Round(cornerPoints[1].X, 4)))
-                {
-                    if (primaryelementCount.Count != multilayerdPS.Count)
+                    if ((Math.Round(cornerPoints[0].X, 4) != Math.Round(cornerPoints[1].X, 4)))
                     {
-                        cornerPoints.AddRange(otherCorners);
-                        List<XYZ> cornerPointsBackup = cornerPoints;
-
-                        double commonZ = xyzPS[0].Z;
-                        double minX = xyzPS.Min(p => p.X);
-                        double minY = xyzPS.Min(p => p.Y);
-                        double maxX = xyzPS.Max(p => p.X);
-                        double maxY = xyzPS.Max(p => p.Y);
-                        XYZ topLeft = new XYZ(minX, maxY, commonZ);
-                        XYZ topRight = new XYZ(maxX, maxY, commonZ);
-                        XYZ bottomLeft = new XYZ(minX, minY, commonZ);
-                        XYZ bottomRight = new XYZ(maxX, minY, commonZ);
-                        List<XYZ> _cornerPoints = new List<XYZ> { topLeft, topRight, bottomLeft, bottomRight };
-
-                        if (_previousXYZ != null)
+                        if (primaryelementCount.Count != multilayerdPS.Count)
                         {
-                            XYZ[] cp = cornerPoints.ToArray();
-                            XYZ minDistanceCorner = FindMinimumDistance(_previousXYZ, cp);
-                            cornerPoints = new List<XYZ> { minDistanceCorner };
-                            cornerPoints.AddRange(cornerPointsBackup.Except(cornerPoints));
-                        }
-                        PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
-                     new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
-                        PCl2 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
-                         new XYZ(cornerPoints[2].X, cornerPoints[2].Y, 0));
-                        PCl3 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
-                         new XYZ(cornerPoints[3].X, cornerPoints[3].Y, 0));
-                        linesWithLengths = new Dictionary<double, List<XYZ>>
+                            cornerPoints.AddRange(otherCorners);
+                            List<XYZ> cornerPointsBackup = cornerPoints;
+
+                            double commonZ = xyzPS[0].Z;
+                            double minX = xyzPS.Min(p => p.X);
+                            double minY = xyzPS.Min(p => p.Y);
+                            double maxX = xyzPS.Max(p => p.X);
+                            double maxY = xyzPS.Max(p => p.Y);
+                            XYZ topLeft = new XYZ(minX, maxY, commonZ);
+                            XYZ topRight = new XYZ(maxX, maxY, commonZ);
+                            XYZ bottomLeft = new XYZ(minX, minY, commonZ);
+                            XYZ bottomRight = new XYZ(maxX, minY, commonZ);
+                            List<XYZ> _cornerPoints = new List<XYZ> { topLeft, topRight, bottomLeft, bottomRight };
+
+                            if (_previousXYZ != null)
+                            {
+                                XYZ[] cp = cornerPoints.ToArray();
+                                XYZ minDistanceCorner = FindMinimumDistance(_previousXYZ, cp);
+                                cornerPoints = new List<XYZ> { minDistanceCorner };
+                                cornerPoints.AddRange(cornerPointsBackup.Except(cornerPoints));
+                            }
+                            PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                         new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
+                            PCl2 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                             new XYZ(cornerPoints[2].X, cornerPoints[2].Y, 0));
+                            PCl3 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                             new XYZ(cornerPoints[3].X, cornerPoints[3].Y, 0));
+                            linesWithLengths = new Dictionary<double, List<XYZ>>
                                                        {
                                                            {PCl1.Length,new List< XYZ>() {cornerPoints[0], cornerPoints[1] } },
                                                            {PCl2.Length,new List< XYZ>() { cornerPoints[0], cornerPoints[2] }  },
                                                            {PCl3.Length,new List< XYZ>() { cornerPoints[0], cornerPoints[3] }  }
                                                        };
-                        linesWithLengths = linesWithLengths.OrderBy(x => x.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        linesWithLengths.Remove(linesWithLengths.Keys.FirstOrDefault());
-                        linesWithLengths.Remove(linesWithLengths.Keys.LastOrDefault());
+                            linesWithLengths = linesWithLengths.OrderBy(x => x.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                            linesWithLengths.Remove(linesWithLengths.Keys.FirstOrDefault());
+                            linesWithLengths.Remove(linesWithLengths.Keys.LastOrDefault());
+                        }
+                        else
+                        {
+                            PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
+                         new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
+                            linesWithLengths = new Dictionary<double, List<XYZ>> { { PCl1.Length, new List<XYZ>() { cornerPoints[0], cornerPoints[1] } } };
+                        }
                     }
                     else
                     {
@@ -2819,78 +2828,80 @@ namespace AutoConnectPro
                      new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
                         linesWithLengths = new Dictionary<double, List<XYZ>> { { PCl1.Length, new List<XYZ>() { cornerPoints[0], cornerPoints[1] } } };
                     }
-                }
-                else
-                {
-                    PCl1 = Line.CreateBound(new XYZ(cornerPoints[0].X, cornerPoints[0].Y, 0),
-                 new XYZ(cornerPoints[1].X, cornerPoints[1].Y, 0));
-                    linesWithLengths = new Dictionary<double, List<XYZ>> { { PCl1.Length, new List<XYZ>() { cornerPoints[0], cornerPoints[1] } } };
-                }
 
-                List<XYZ> XYZPoints = linesWithLengths.Select(x => x.Value).ToList().FirstOrDefault();
-                List<Element> matchingElements = multilayerdPS
-                                                 .Where(kvp => XYZPoints.Contains(kvp.Key))
-                                                 .Select(kvp => kvp.Value)
-                                                 .ToList();
-                if (isangledVerticalConduits)
-                {
-                    XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
-                ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
-                    XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
-                       ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
-                    List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
-                    double outsideDiameter1 = matchingElements[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
-                    double outsideDiameter2 = matchingElements[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
-                    Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
-                    XYZ direction = connectedLine.Direction;
-                    XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
-                    XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
-                    Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
-                    otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
-                    Element midPointConduit = null;
-                    List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
-                    List<Element> conduitsBetween = new List<Element>();
-                    conduitsBetween.Add(matchingElements[0]);
-                    foreach (Element conduit in collector)
+                    List<XYZ> XYZPoints = linesWithLengths.Select(x => x.Value).ToList().FirstOrDefault();
+                    List<Element> matchingElements = multilayerdPS
+                                                     .Where(kvp => XYZPoints.Contains(kvp.Key))
+                                                     .Select(kvp => kvp.Value)
+                                                     .ToList();
+                    if (isangledVerticalConduits)
                     {
-                        LocationCurve conduitCurve = conduit.Location as LocationCurve;
-                        if (conduitCurve == null) continue;
-                        if (conduit.Id == otherConduit.Id) continue;
-                        LocationCurve otherConduitCurve = otherConduit.Location as LocationCurve;
-                        if (conduit.Id != matchingElements[0].Id && conduit.Id != matchingElements[1].Id)
+                        XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
+                    ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                        XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
+                           ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                        List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
+                        double outsideDiameter1 = matchingElements[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                        double outsideDiameter2 = matchingElements[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                        Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
+                        XYZ direction = connectedLine.Direction;
+                        XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
+                        XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
+                        Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
+                        otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
+                        Element midPointConduit = null;
+                        List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
+                        List<Element> conduitsBetween = new List<Element>();
+                        conduitsBetween.Add(matchingElements[0]);
+                        foreach (Element conduit in collector)
                         {
-                            SetComparisonResult result = conduitCurve.Curve.Intersect(otherConduitCurve.Curve, out IntersectionResultArray intersectionResultArray);
-                            if (result == SetComparisonResult.Overlap)
+                            LocationCurve conduitCurve = conduit.Location as LocationCurve;
+                            if (conduitCurve == null) continue;
+                            if (conduit.Id == otherConduit.Id) continue;
+                            LocationCurve otherConduitCurve = otherConduit.Location as LocationCurve;
+                            if (conduit.Id != matchingElements[0].Id && conduit.Id != matchingElements[1].Id)
                             {
-                                if (!conduitsBetween.Contains(otherConduit))
+                                SetComparisonResult result = conduitCurve.Curve.Intersect(otherConduitCurve.Curve, out IntersectionResultArray intersectionResultArray);
+                                if (result == SetComparisonResult.Overlap)
                                 {
-                                    conduitsBetween.Add(conduit);
-                                }
-                                if (midPointConduit == null || midPointConduit.Id != conduit.Id)
-                                {
-                                    midPointConduit = conduit;
+                                    if (!conduitsBetween.Contains(otherConduit))
+                                    {
+                                        conduitsBetween.Add(conduit);
+                                    }
+                                    if (midPointConduit == null || midPointConduit.Id != conduit.Id)
+                                    {
+                                        midPointConduit = conduit;
+                                    }
                                 }
                             }
                         }
+                        conduitsBetween.Add(matchingElements[1]);
+                        GroupedElement = conduitsBetween;
+                        if (otherConduit != null)
+                        {
+                            doc.Delete(otherConduit.Id);
+                        }
                     }
-                    conduitsBetween.Add(matchingElements[1]);
-                    GroupedElement = conduitsBetween;
-                    if (otherConduit != null)
+                    else
                     {
-                        doc.Delete(otherConduit.Id);
+                        List<XYZ> orderedPoints = CreateBoundingBoxLineKick(linesWithLengths, matchingElements, multilayerdPS, doc);
+                        GroupedElement = multilayerdPS
+                                                      .Where(kvp => orderedPoints.Contains(kvp.Key))
+                                                      .Select(kvp => kvp.Value)
+                                                      .ToList();
+                        _previousXYZ = cornerPoints[0];
                     }
+                    trans.Commit();
                 }
-                else
-                {
-                    List<XYZ> orderedPoints = CreateBoundingBoxLineKick(linesWithLengths, matchingElements, multilayerdPS, doc);
-                    GroupedElement = multilayerdPS
-                                                  .Where(kvp => orderedPoints.Contains(kvp.Key))
-                                                  .Select(kvp => kvp.Value)
-                                                  .ToList();
-                    _previousXYZ = cornerPoints[0];
-                }
-                trans.Commit();
             }
+            else
+            {
+                if (multilayerdPS.Count == 1)
+                {
+                    GroupedElement.Add(multilayerdPS.FirstOrDefault().Value);
+                }
+            }
+           
             return GroupedElement;
         }
         public static List<XYZ> CreateBoundingBoxLineKick(Dictionary<double, List<XYZ>> ConduitconnectedLine, List<Element> twoConduits,
