@@ -454,8 +454,10 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                                                 Dictionary<double, List<Element>> group = new Dictionary<double, List<Element>>();
                                                 if (CongridDictionary1.Count == 2)
                                                 {
-                                                    Dictionary<double, List<Element>> groupPrimary = GroupByElementsWithElevation(CongridDictionary1.First().Value.Select(x => x.Conduit).ToList(), "Middle Elevation");
-                                                    Dictionary<double, List<Element>> groupSecondary = GroupByElementsWithElevation(CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList(), "Middle Elevation");
+                                                    Dictionary<double, List<Element>> groupPrimary = new Dictionary<double, List<Element>>();
+                                                    groupPrimary.Add(0, CongridDictionary1.First().Value.Select(x => x.Conduit).ToList());
+                                                    Dictionary<double, List<Element>> groupSecondary = new Dictionary<double, List<Element>>();
+                                                    groupSecondary.Add(0, CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList());
                                                     foreach (var elem in groupPrimary)
                                                     {
                                                         foreach (var elem2 in elem.Value)
@@ -3211,7 +3213,7 @@ namespace Revit.SDK.Samples.AutoConnectPro.CS
                 double num2 = ((conGrid.Conduit.GetType() == typeof(Autodesk.Revit.DB.Electrical.Conduit)) ? conGrid.Conduit.LookupParameter("Outside Diameter").AsDouble() : conGrid.Conduit.LookupParameter("Width").AsDouble());
                 double num3 = num / 2.0;
                 double num4 = num2 / 2.0;
-                double value = num3 + num4 + maximumSpacing;
+                double value = num3 + num4 + 1.0;
                 double distance = new XYZ(endPointOne.X, endPointOne.Y, 0).DistanceTo(new XYZ(endPointTwo.X, endPointTwo.Y, 0));
                 if (distance <= value)
                 {

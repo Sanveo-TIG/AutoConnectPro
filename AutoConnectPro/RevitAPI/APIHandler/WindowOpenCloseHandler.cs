@@ -555,13 +555,45 @@ namespace AutoConnectPro
                             {
                                 locCurve1 = dictFirstElementDUP[0].Location as LocationCurve;
                                 locCurve2 = dictSecondElementDUP[0].Location as LocationCurve;
-                                XYZ startPoint = Utility.GetXYvalue(locCurve1.Curve.GetEndPoint(0));
-                                XYZ endPoint = Utility.GetXYvalue(locCurve2.Curve.GetEndPoint(1));
-                                //connectLine = Line.CreateBound(startPoint, endPoint);
                                 GetClosestConnectorJoin(dictFirstElementDUP[0] as Conduit, dictSecondElementDUP[0] as Conduit,
                                     out Connector closestConnector2, out Connector closestConnector1);
-                                connectLine = Line.CreateBound(new XYZ(closestConnector1.Origin.X, closestConnector1.Origin.Y, 0),
-                                    new XYZ(closestConnector2.Origin.X, closestConnector2.Origin.Y, 0));
+                                XYZ intersectionPoint = null;
+                                for (int k = 0; k < dictFirstElementDUP.Count; k++)
+                                {
+                                    for (int j = 0; j < dictSecondElementDUP.Count; j++)
+                                    {
+                                        locCurve1 = dictFirstElementDUP[k].Location as LocationCurve;
+                                        locCurve2 = dictSecondElementDUP[j].Location as LocationCurve;
+                                        XYZ startPoint1 = locCurve1.Curve.GetEndPoint(0);
+                                        XYZ endPoint1 = locCurve1.Curve.GetEndPoint(1);
+                                        XYZ startPoint2 = locCurve2.Curve.GetEndPoint(0);
+                                        XYZ endPoint2 = locCurve2.Curve.GetEndPoint(1);
+                                        double extensionLength = 50.0;
+                                        XYZ direction1 = (endPoint1 - startPoint1).Normalize();
+                                        XYZ direction2 = (endPoint2 - startPoint2).Normalize();
+                                        XYZ extendedStart1 = startPoint1 - direction1 * extensionLength;
+                                        XYZ extendedEnd1 = endPoint1 + direction1 * extensionLength;
+                                        XYZ extendedStart2 = startPoint2 - direction2 * extensionLength;
+                                        XYZ extendedEnd2 = endPoint2 + direction2 * extensionLength;
+                                        intersectionPoint = Utility.GetIntersection(Line.CreateBound(extendedStart1, extendedEnd1), Line.CreateBound(extendedStart2, extendedEnd2));
+                                        if (intersectionPoint != null)
+                                        {
+                                            connectLine = Line.CreateBound(
+                                                new XYZ(intersectionPoint.X, intersectionPoint.Y, 0),
+                                                new XYZ(closestConnector2.Origin.X, closestConnector2.Origin.Y, 0));
+                                            break;
+                                        }
+                                    }
+                                    if (intersectionPoint != null)
+                                    {
+                                        break;
+                                    }
+                                }
+                                if (intersectionPoint == null)
+                                {
+                                    connectLine = Line.CreateBound(new XYZ(closestConnector1.Origin.X, closestConnector1.Origin.Y, 0),
+                                        new XYZ(closestConnector2.Origin.X, closestConnector2.Origin.Y, 0));
+                                }
                             }
                             else
                             {
@@ -880,26 +912,96 @@ namespace AutoConnectPro
                                             if (elementsList is Conduit && elementsList != null)
                                             {
                                                 XYZ xyz = ((elementsList.Location as LocationCurve).Curve as Line).Direction;
-                                                if (xyz.Z == 1)
+
+                                                //Reverse
+                                                List<Element> reverseSecondaryKickElements = new List<Element>();
+                                                List<Element> PrimaryKickElements = new List<Element>();
+                                                Dictionary<double, List<Element>> kickGroupPrimary = GroupByElementsWithElevation(dictFirstElement, offsetVariable);
+                                                List<Element> dictSecondElements = _secondKickGroup;
+                                                foreach (KeyValuePair<double, List<Element>> stubPri in kickGroupPrimary)
                                                 {
-                                                    using (SubTransaction subReorder = new SubTransaction(doc))
+                                                    List<Element> getSplitSecondaryElements = new List<Element>();
+                                                    for (int j = 0; j < stubPri.Value.Count; j++)
                                                     {
-                                                        subReorder.Start();
-                                                        //90 Kick Far
-                                                        isfar = true;
-                                                        ApplyKick(doc, _uiapp, _firstKickGroup, _secondKickGroup, offsetVariable);
-                                                        subReorder.Commit();
+                                                        getSplitSecondaryElements.Add(dictSecondElements[j]);
+                                                    }
+                                                    List<Line> previousLine = new List<Line>();
+                                                    bool isReverseDone = false;
+                                                    for (int z = 0; z < getSplitSecondaryElements.Count; z++)
+                                                    {
+                                                        ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(stubPri.Value[z]);
+                                                        ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(getSplitSecondaryElements[z]);
+                                                        Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                                        Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
+                                                        foreach (Line pl in previousLine)
+                                                        {
+                                                            if (Utility.GetIntersection(pl, checkline) != null)
+                                                            {
+                                                                getSplitSecondaryElements.Reverse();
+                                                                isReverseDone = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (isReverseDone)
+                                                            break;
+                                                        previousLine.Add(checkline);
+                                                    }
+                                                    reverseSecondaryKickElements.AddRange(getSplitSecondaryElements);
+                                                    foreach (Element ele in getSplitSecondaryElements)
+                                                    {
+                                                        dictSecondElements.Remove(ele);
+                                                    }
+                                                    PrimaryKickElements.AddRange(stubPri.Value);
+                                                }
+                                                if (reverseSecondaryKickElements.Count > 0 && PrimaryKickElements.Count > 0 &&
+                                                   reverseSecondaryKickElements.Count == PrimaryKickElements.Count)
+                                                {
+                                                    if (Math.Abs(xyz.Z) == 1)
+                                                    {
+                                                        using (SubTransaction subReorder = new SubTransaction(doc))
+                                                        {
+                                                            subReorder.Start();
+                                                            //90 Kick Far
+                                                            isfar = true;
+                                                            ApplyKick(doc, _uiapp, PrimaryKickElements, reverseSecondaryKickElements, offsetVariable);
+                                                            subReorder.Commit();
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        using (SubTransaction subReorder = new SubTransaction(doc))
+                                                        {
+                                                            subReorder.Start();
+                                                            //90 Kick Near
+                                                            isfar = false;
+                                                            ApplyKick(doc, _uiapp, reverseSecondaryKickElements, PrimaryKickElements, offsetVariable);
+                                                            subReorder.Commit();
+                                                        }
                                                     }
                                                 }
                                                 else
                                                 {
-                                                    using (SubTransaction subReorder = new SubTransaction(doc))
+                                                    if (Math.Abs(xyz.Z) == 1)
                                                     {
-                                                        subReorder.Start();
-                                                        //90 Kick Near
-                                                        isfar = false;
-                                                        ApplyKick(doc, _uiapp, _secondKickGroup, _firstKickGroup, offsetVariable);
-                                                        subReorder.Commit();
+                                                        using (SubTransaction subReorder = new SubTransaction(doc))
+                                                        {
+                                                            subReorder.Start();
+                                                            //90 Kick Far
+                                                            isfar = true;
+                                                            ApplyKick(doc, _uiapp, _firstKickGroup, _secondKickGroup, offsetVariable);
+                                                            subReorder.Commit();
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        using (SubTransaction subReorder = new SubTransaction(doc))
+                                                        {
+                                                            subReorder.Start();
+                                                            //90 Kick Near
+                                                            isfar = false;
+                                                            ApplyKick(doc, _uiapp, _secondKickGroup, _firstKickGroup, offsetVariable);
+                                                            subReorder.Commit();
+                                                        }
                                                     }
                                                 }
                                             }
@@ -3548,7 +3650,7 @@ namespace AutoConnectPro
                 double num2 = ((conGrid.Conduit.GetType() == typeof(Autodesk.Revit.DB.Electrical.Conduit)) ? conGrid.Conduit.LookupParameter("Outside Diameter").AsDouble() : conGrid.Conduit.LookupParameter("Width").AsDouble());
                 double num3 = num / 2.0;
                 double num4 = num2 / 2.0;
-                double value = num3 + num4 + maximumSpacing;
+                double value = num3 + num4 + 1.0;
                 double distance = new XYZ(endPointOne.X, endPointOne.Y, 0).DistanceTo(new XYZ(endPointTwo.X, endPointTwo.Y, 0));
                 if (distance <= value)
                 {
