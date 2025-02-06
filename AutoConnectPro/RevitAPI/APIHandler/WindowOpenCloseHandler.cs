@@ -589,6 +589,8 @@ namespace AutoConnectPro
                                     {
                                         try
                                         {
+                                            List<Element> reverseSecondaryStubElements = new List<Element>();
+                                            List<Element> PrimaryStubElements = new List<Element>();
                                             if (MainWindow.Instance.tgleAngleAcute.Visibility == System.Windows.Visibility.Visible)
                                             {
                                                 MainWindow.Instance.tgleAngleAcute.Visibility = System.Windows.Visibility.Collapsed;
@@ -598,9 +600,56 @@ namespace AutoConnectPro
                                             }
                                             if (dictFirstElementDUP.Count == dictSecondElementDUP.Count)
                                             {
-                                                for (int i = 0; i < dictFirstElement.Count; i++)
+                                                List<Element> dictSecondElements = dictSecondElementDUP;
+                                                foreach (KeyValuePair<double, List<Element>> stubPri in stubGroupPrimary)
                                                 {
-                                                    Utility.CreateElbowFittings(dictFirstElementDUP[i], dictSecondElementDUP[i], doc, _uiapp);
+                                                    List<Element> getSplitSecondaryElements = new List<Element>();
+                                                    for (int j = 0; j < stubPri.Value.Count; j++)
+                                                    {
+                                                        getSplitSecondaryElements.Add(dictSecondElements[j]);
+                                                    }
+                                                    List<Line> previousLine = new List<Line>();
+                                                    bool isReverseDone = false;
+                                                    for (int z = 0; z < getSplitSecondaryElements.Count; z++)
+                                                    {
+                                                        ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(stubPri.Value[z]);
+                                                        ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(getSplitSecondaryElements[z]);
+                                                        Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
+                                                        Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
+                                                        foreach (Line pl in previousLine)
+                                                        {
+                                                            if (Utility.GetIntersection(pl, checkline) != null)
+                                                            {
+                                                                getSplitSecondaryElements.Reverse();
+                                                                isReverseDone = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (isReverseDone)
+                                                            break;
+                                                        previousLine.Add(checkline);
+                                                    }
+                                                    reverseSecondaryStubElements.AddRange(getSplitSecondaryElements);
+                                                    foreach (Element ele in getSplitSecondaryElements)
+                                                    {
+                                                        dictSecondElements.Remove(ele);
+                                                    }
+                                                    PrimaryStubElements.AddRange(stubPri.Value);
+                                                }
+                                                if (reverseSecondaryStubElements.Count > 0 && PrimaryStubElements.Count > 0 &&
+                                                    reverseSecondaryStubElements.Count == PrimaryStubElements.Count)
+                                                {
+                                                    for (int i = 0; i < dictFirstElement.Count; i++)
+                                                    {
+                                                        Utility.CreateElbowFittings(PrimaryStubElements[i], reverseSecondaryStubElements[i], doc, _uiapp);
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    for (int i = 0; i < dictFirstElement.Count; i++)
+                                                    {
+                                                        Utility.CreateElbowFittings(dictFirstElementDUP[i], dictSecondElementDUP[i], doc, _uiapp);
+                                                    }
                                                 }
                                             }
                                             else
