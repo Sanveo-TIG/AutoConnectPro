@@ -158,6 +158,10 @@ namespace AutoConnectPro
                 return;
             }
         }
+        public static bool AreXYCoordinatesEqual(XYZ point1, XYZ point2)
+        {
+            return new XYZ(Math.Abs(point1.X), Math.Abs(point1.Y), 0).IsAlmostEqualTo(new XYZ(Math.Abs(point2.X), Math.Abs(point2.Y), 0));
+        }
         public void AutoConnect(UIApplication _uiapp, List<Element> SelectedElements)
         {
             UIDocument uidoc = _uiapp.ActiveUIDocument;
@@ -188,8 +192,58 @@ namespace AutoConnectPro
 
                     if (CongridDictionary1.Count == 2)
                     {
-                        List<Element> dictFirstElement = CongridDictionary1.First().Value.Select(x => x.Conduit).ToList();
-                        List<Element> dictSecondElement = CongridDictionary1.Last().Value.Select(x => x.Conduit).ToList();
+                        List<Element> dictFirstElement = new List<Element>();
+                        List<Element> dictSecondElement = new List<Element>();
+
+
+                        var firstGroup = CongridDictionary1.First().Value;
+                        List<Element> firstGroupElements = firstGroup.Select(x => x.Conduit).ToList();
+
+                        bool isFirstGroupInSecond = false;
+
+                        if (firstGroupElements.Count > 0)
+                        {
+                            Conduit firstConduit = firstGroupElements.First() as Conduit;
+                            if (firstConduit != null)
+                            {
+                                LocationCurve locCurve = firstConduit.Location as LocationCurve;
+                                if (locCurve != null)
+                                {
+                                    Line conduitLine = locCurve.Curve as Line;
+                                    if (conduitLine != null)
+                                    {
+                                        XYZ startPoint = conduitLine.GetEndPoint(0);
+                                        XYZ endPoint = conduitLine.GetEndPoint(1);
+
+
+                                        if (AreXYCoordinatesEqual(startPoint, endPoint))
+                                        {
+                                            dictSecondElement.AddRange(firstGroupElements);
+                                            isFirstGroupInSecond = true;
+                                        }
+                                        else
+                                        {
+                                            dictFirstElement.AddRange(firstGroupElements);
+                                            isFirstGroupInSecond = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+
+                        var secondGroup = CongridDictionary1.Last().Value;
+                        List<Element> secondGroupElements = secondGroup.Select(x => x.Conduit).ToList();
+
+
+                        if (isFirstGroupInSecond)
+                        {
+                            dictFirstElement.AddRange(secondGroupElements);
+                        }
+                        else
+                        {
+                            dictSecondElement.AddRange(secondGroupElements);
+                        }                       
                         Line firLine = (dictFirstElement[0].Location as LocationCurve).Curve as Line;
                         XYZ firstLineStart = firLine.GetEndPoint(0);
                         XYZ firstLineEnd = firLine.GetEndPoint(1);
@@ -2837,7 +2891,68 @@ namespace AutoConnectPro
                                                        .Select(kvp => kvp.Value)
                                                        .ToList();
                 }
-                if (isangledVerticalConduits)
+                #region CENTER CONDUIT CREATE TO FIND INTERSECT ANY OTHER CONDUITS 
+                List<Element> conduitsBetween = new List<Element>();
+                XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
+                  ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
+                   ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
+                double outsideDiameter1 = matchingElements[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                double outsideDiameter2 = matchingElements[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
+                XYZ direction = connectedLine.Direction;
+                XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
+                XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
+                Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
+                otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
+                List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
+                double largestDiameter = collector.Max(conduit =>
+                {
+                    Parameter diameterParam = conduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
+                    return diameterParam?.AsDouble() ?? 0;
+                });
+                Parameter newDiameterParam = otherConduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
+                if (newDiameterParam != null && newDiameterParam.IsReadOnly == false)
+                {
+                    newDiameterParam.Set(largestDiameter);
+                }
+                #endregion
+                #region SOLID INTERSECTION METHOD
+                Options opt = new Options();
+                GeometryElement GE = otherConduit.get_Geometry(opt);
+                foreach (GeometryObject GO in GE)
+                {
+                    if (GO is Solid)
+                    {
+                        Solid solid = (Solid)GO;
+                        ElementIntersectsSolidFilter filter = new ElementIntersectsSolidFilter(solid);
+                        List<Conduit> ConduitsIntersecting = new FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(typeof(Conduit))
+                            .WherePasses(filter).Cast<Conduit>().ToList();
+                        foreach (Conduit con in ConduitsIntersecting)
+                        {
+                            if (con.Id != matchingElements[0].Id)
+                            {
+                                foreach (KeyValuePair<XYZ, Element> PS in multilayerdPS)
+                                {
+                                    if ((PS.Value as Conduit).Id == con.Id)
+                                    {
+                                        GroupedElement.Add(PS.Value);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                GroupedElement = ArrangeConduits(doc, matchingElements[0] as Conduit, GroupedElement);
+                #endregion
+                if (otherConduit != null)
+                {
+                    doc.Delete(otherConduit.Id);
+                }
+
+
+                /*if (isangledVerticalConduits)
                 {
                     XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
                 ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
@@ -2888,15 +3003,16 @@ namespace AutoConnectPro
                                                   .Select(kvp => kvp.Value)
                                                   .ToList();
                     _previousXYZ = cornerPoints[0];
-                }
+                }*/
                 trans.Commit();
             }
             return GroupedElement;
         }
-        public static List<Element> FindCornerConduitsKick(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, bool isangledVerticalConduits, List<Element> primaryelementCount)
+        public List<Element> FindCornerConduitsKick(Dictionary<XYZ, Element> multilayerdPS, List<XYZ> xyzPS, Document doc, bool isangledVerticalConduits, List<Element> primaryelementCount)
         {
+
             List<Element> GroupedElement = new List<Element>();
-            if(xyzPS.Count > 1)
+            if (xyzPS.Count > 1)
             {
                 using (SubTransaction trans = new SubTransaction(doc))
                 {
@@ -2985,63 +3101,124 @@ namespace AutoConnectPro
                                                      .Where(kvp => XYZPoints.Contains(kvp.Key))
                                                      .Select(kvp => kvp.Value)
                                                      .ToList();
-                    if (isangledVerticalConduits)
+
+                    #region CENTER CONDUIT CREATE TO FIND INTERSECT ANY OTHER CONDUITS 
+                    List<Element> conduitsBetween = new List<Element>();
+                    XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
+                      ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                    XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
+                       ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                    List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
+                    double outsideDiameter1 = matchingElements[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                    double outsideDiameter2 = matchingElements[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                    Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
+                    XYZ direction = connectedLine.Direction;
+                    XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
+                    XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
+                    Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
+                    otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
+                    List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
+                    double largestDiameter = collector.Max(conduit =>
                     {
-                        XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
-                    ((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
-                        XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
-                           ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
-                        List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
-                        double outsideDiameter1 = matchingElements[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
-                        double outsideDiameter2 = matchingElements[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
-                        Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
-                        XYZ direction = connectedLine.Direction;
-                        XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
-                        XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
-                        Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
-                        otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
-                        Element midPointConduit = null;
-                        List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
-                        List<Element> conduitsBetween = new List<Element>();
-                        conduitsBetween.Add(matchingElements[0]);
-                        foreach (Element conduit in collector)
+                        Parameter diameterParam = conduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
+                        return diameterParam?.AsDouble() ?? 0;
+                    });
+                    Parameter newDiameterParam = otherConduit.get_Parameter(BuiltInParameter.RBS_CONDUIT_DIAMETER_PARAM);
+                    if (newDiameterParam != null && newDiameterParam.IsReadOnly == false)
+                    {
+                        newDiameterParam.Set(largestDiameter);
+                    }
+                    #endregion
+                    #region SOLID INTERSECTION METHOD
+                    Options opt = new Options();
+                    GeometryElement GE = otherConduit.get_Geometry(opt);
+                    foreach (GeometryObject GO in GE)
+                    {
+                        if (GO is Solid)
                         {
-                            LocationCurve conduitCurve = conduit.Location as LocationCurve;
-                            if (conduitCurve == null) continue;
-                            if (conduit.Id == otherConduit.Id) continue;
-                            LocationCurve otherConduitCurve = otherConduit.Location as LocationCurve;
-                            if (conduit.Id != matchingElements[0].Id && conduit.Id != matchingElements[1].Id)
+                            Solid solid = (Solid)GO;
+                            ElementIntersectsSolidFilter filter = new ElementIntersectsSolidFilter(solid);
+                            List<Conduit> ConduitsIntersecting = new FilteredElementCollector(doc, doc.ActiveView.Id).OfClass(typeof(Conduit))
+                                .WherePasses(filter).Cast<Conduit>().ToList();
+                            foreach (Conduit con in ConduitsIntersecting)
                             {
-                                SetComparisonResult result = conduitCurve.Curve.Intersect(otherConduitCurve.Curve, out IntersectionResultArray intersectionResultArray);
-                                if (result == SetComparisonResult.Overlap)
+                                if (con.Id != matchingElements[0].Id)
                                 {
-                                    if (!conduitsBetween.Contains(otherConduit))
+                                    foreach (KeyValuePair<XYZ, Element> PS in multilayerdPS)
                                     {
-                                        conduitsBetween.Add(conduit);
-                                    }
-                                    if (midPointConduit == null || midPointConduit.Id != conduit.Id)
-                                    {
-                                        midPointConduit = conduit;
+                                        if ((PS.Value as Conduit).Id == con.Id)
+                                        {
+                                            GroupedElement.Add(PS.Value);
+                                        }
                                     }
                                 }
                             }
                         }
-                        conduitsBetween.Add(matchingElements[1]);
-                        GroupedElement = conduitsBetween;
-                        if (otherConduit != null)
-                        {
-                            doc.Delete(otherConduit.Id);
-                        }
                     }
-                    else
+                    GroupedElement = ArrangeConduits(doc, matchingElements[0] as Conduit, GroupedElement);
+                    #endregion
+                    if (otherConduit != null)
                     {
-                        List<XYZ> orderedPoints = CreateBoundingBoxLineKick(linesWithLengths, matchingElements, multilayerdPS, doc);
-                        GroupedElement = multilayerdPS
-                                                      .Where(kvp => orderedPoints.Contains(kvp.Key))
-                                                      .Select(kvp => kvp.Value)
-                                                      .ToList();
-                        _previousXYZ = cornerPoints[0];
+                        doc.Delete(otherConduit.Id);
                     }
+
+                    //if (isangledVerticalConduits)
+                    //{
+                    //    XYZ midPoint1 = (((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(0) +
+                    //((matchingElements[0].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                    //    XYZ midPoint2 = (((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(0) +
+                    //       ((matchingElements[1].Location as LocationCurve).Curve).GetEndPoint(1)) / 2;
+                    //    List<XYZ> midXYZs = new List<XYZ>() { midPoint1, midPoint2 };
+                    //    double outsideDiameter1 = matchingElements[0].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                    //    double outsideDiameter2 = matchingElements[1].get_Parameter(BuiltInParameter.RBS_CONDUIT_OUTER_DIAM_PARAM).AsDouble();
+                    //    Line connectedLine = Line.CreateBound(midXYZs[0], midXYZs[1]);
+                    //    XYZ direction = connectedLine.Direction;
+                    //    XYZ newXYZ1 = midXYZs[0] - direction * (outsideDiameter1 / 2);
+                    //    XYZ newXYZ2 = midXYZs[1] + direction * (outsideDiameter2 / 2);
+                    //    Line centerLine = Line.CreateBound(newXYZ1, newXYZ2);
+                    //    otherConduit = Utility.CreateConduit(doc, matchingElements[0], centerLine);
+                    //    Element midPointConduit = null;
+                    //    List<Element> collector = multilayerdPS.Select(x => x.Value).ToList();
+                    //    List<Element> conduitsBetween = new List<Element>();
+                    //    conduitsBetween.Add(matchingElements[0]);
+                    //    foreach (Element conduit in collector)
+                    //    {
+                    //        LocationCurve conduitCurve = conduit.Location as LocationCurve;
+                    //        if (conduitCurve == null) continue;
+                    //        if (conduit.Id == otherConduit.Id) continue;
+                    //        LocationCurve otherConduitCurve = otherConduit.Location as LocationCurve;
+                    //        if (conduit.Id != matchingElements[0].Id && conduit.Id != matchingElements[1].Id)
+                    //        {
+                    //            SetComparisonResult result = conduitCurve.Curve.Intersect(otherConduitCurve.Curve, out IntersectionResultArray intersectionResultArray);
+                    //            if (result == SetComparisonResult.Overlap)
+                    //            {
+                    //                if (!conduitsBetween.Contains(otherConduit))
+                    //                {
+                    //                    conduitsBetween.Add(conduit);
+                    //                }
+                    //                if (midPointConduit == null || midPointConduit.Id != conduit.Id)
+                    //                {
+                    //                    midPointConduit = conduit;
+                    //                }
+                    //            }
+                    //        }
+                    //    }
+                    //    conduitsBetween.Add(matchingElements[1]);
+                    //    GroupedElement = conduitsBetween;
+                    //    if (otherConduit != null)
+                    //    {
+                    //        doc.Delete(otherConduit.Id);
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    List<XYZ> orderedPoints = CreateBoundingBoxLineKick(linesWithLengths, matchingElements, multilayerdPS, doc);
+                    //    GroupedElement = multilayerdPS
+                    //                                  .Where(kvp => orderedPoints.Contains(kvp.Key))
+                    //                                  .Select(kvp => kvp.Value)
+                    //                                  .ToList();
+                    //    _previousXYZ = cornerPoints[0];
+                    //}
                     trans.Commit();
                 }
             }
@@ -3052,7 +3229,6 @@ namespace AutoConnectPro
                     GroupedElement.Add(multilayerdPS.FirstOrDefault().Value);
                 }
             }
-           
             return GroupedElement;
         }
         public static List<XYZ> CreateBoundingBoxLineKick(Dictionary<double, List<XYZ>> ConduitconnectedLine, List<Element> twoConduits,
