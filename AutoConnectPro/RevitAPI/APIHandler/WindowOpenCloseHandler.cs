@@ -696,9 +696,10 @@ namespace AutoConnectPro
                                                     }
                                                     List<Line> previousLine = new List<Line>();
                                                     bool isReverseDone = false;
+                                                    List<Element> orderPrimaryConduits = Utility.ConduitInOrder(stubPri.Value);
                                                     for (int z = 0; z < getSplitSecondaryElements.Count; z++)
                                                     {
-                                                        ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(stubPri.Value[z]);
+                                                        ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(orderPrimaryConduits[z]);
                                                         ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(getSplitSecondaryElements[z]);
                                                         Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
                                                         Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
@@ -720,7 +721,7 @@ namespace AutoConnectPro
                                                     {
                                                         dictSecondElements.Remove(ele);
                                                     }
-                                                    PrimaryStubElements.AddRange(stubPri.Value);
+                                                    PrimaryStubElements.AddRange(orderPrimaryConduits);
                                                 }
                                                 if (reverseSecondaryStubElements.Count > 0 && PrimaryStubElements.Count > 0 &&
                                                     reverseSecondaryStubElements.Count == PrimaryStubElements.Count)
@@ -981,9 +982,10 @@ namespace AutoConnectPro
                                                     }
                                                     List<Line> previousLine = new List<Line>();
                                                     bool isReverseDone = false;
+                                                    List<Element> orderPrimaryConduits = Utility.ConduitInOrder(stubPri.Value);
                                                     for (int z = 0; z < getSplitSecondaryElements.Count; z++)
                                                     {
-                                                        ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(stubPri.Value[z]);
+                                                        ConnectorSet PrimaryConnectors = Utility.GetConnectorSet(orderPrimaryConduits[z]);
                                                         ConnectorSet SecondaryConnectors = Utility.GetConnectorSet(getSplitSecondaryElements[z]);
                                                         Utility.GetClosestConnectors(PrimaryConnectors, SecondaryConnectors, out Connector ConnectorOne, out Connector ConnectorTwo);
                                                         Line checkline = Line.CreateBound(Utility.GetXYvalue(ConnectorOne.Origin), Utility.GetXYvalue(ConnectorTwo.Origin));
@@ -1005,7 +1007,7 @@ namespace AutoConnectPro
                                                     {
                                                         dictSecondElements.Remove(ele);
                                                     }
-                                                    PrimaryKickElements.AddRange(stubPri.Value);
+                                                    PrimaryKickElements.AddRange(orderPrimaryConduits);
                                                 }
                                                 if (reverseSecondaryKickElements.Count > 0 && PrimaryKickElements.Count > 0 &&
                                                    reverseSecondaryKickElements.Count == PrimaryKickElements.Count)
